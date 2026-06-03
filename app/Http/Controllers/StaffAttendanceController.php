@@ -79,7 +79,7 @@ class StaffAttendanceController extends Controller
                     $query->whereHas('user', function ($q) use ($request) {
                         $q->where('first_name', 'like', '%' . $request->search . '%')
                             ->orWhere('last_name', 'like', '%' . $request->search . '%')
-                            ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE '%" . $request->search . "%'");
+                            ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$request->search}%"]);
                     });
                 })
                 ->get(['id', 'staff_id', 'date', 'type']);
@@ -789,7 +789,7 @@ class StaffAttendanceController extends Controller
             $sql = $sql->whereHas('user', function ($q) use ($search) {
                 $q->where('first_name', 'like', '%' . $search . '%')
                     ->orWhere('last_name', 'like', '%' . $search . '%')
-                    ->orwhereRaw("concat(users.first_name,' ',users.last_name) LIKE '%" . $search . "%'")
+                    ->orwhereRaw("concat(users.first_name,' ',users.last_name) LIKE ?", ["%{$search}%"])
                     ->orwhere('id', 'like', '%' . $search . '%');
             });
         }
@@ -854,7 +854,7 @@ class StaffAttendanceController extends Controller
             $sql->whereHas('user', function ($q) use ($search) {
                 $q->where('first_name', 'like', "%$search%")
                     ->orWhere('last_name', 'like', "%$search%")
-                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE '%$search%'");
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
             });
         }
 
