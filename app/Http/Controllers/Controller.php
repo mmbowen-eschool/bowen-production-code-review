@@ -27,6 +27,7 @@ use App\Services\ResponseService;
 use App\Services\SubscriptionService;
 use App\Services\UploadService;
 use App\Services\FeaturesService;
+use App\Services\UserService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
@@ -70,16 +71,6 @@ class Controller extends BaseController
         $this->formFields = $formFields;
         $this->extraFormFields = $extraFormFields;
         $this->contactInquiry = $contactInquiry;
-    }
-
-    public function makeParentPassword($mobile)
-    {
-        return $mobile;
-    }
-
-    public function makeStudentPassword($dob)
-    {
-        return str_replace('-', '', date('d-m-Y', strtotime($dob)));
     }
 
     public function index()
@@ -780,7 +771,7 @@ class Controller extends BaseController
                 ResponseService::errorResponse("Email ID is already taken for Other Role");
             }
 
-            $password = $this->makeParentPassword($request->guardian_mobile);
+            $password = app(UserService::class)->makeParentPassword($request->guardian_mobile);
 
             $parent = array(
                 'first_name' => $request->guardian_first_name,
@@ -813,7 +804,7 @@ class Controller extends BaseController
             if ($request->hasFile('image')) {
                 $image = UploadService::upload($request->image, 'user');
             }
-            $password = $this->makeStudentPassword($request->dob);
+            $password = app(UserService::class)->makeStudentPassword($request->dob);
             //Create Student User First
             $user = User::create([
                 'first_name' => $request->first_name,

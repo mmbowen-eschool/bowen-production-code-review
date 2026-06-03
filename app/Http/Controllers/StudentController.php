@@ -1075,7 +1075,7 @@ class StudentController extends Controller
                 }
                 if ($request->application_status == 1) {
                     $this->student->builder()->where('user_id', $userId)->withTrashed()->update(['application_status' => 1, 'class_section_id' => $request->class_section_id]);
-                    $password = str_replace('-', '', date('d-m-Y', strtotime($user->dob)));
+                    $password = $userService->makeStudentPassword($user->dob);
                     $guardian = $this->user->guardian()->where('id', $student->guardian_id)->firstOrFail();
                     $userService->sendRegistrationEmail($guardian, $user, $student->admission_no, $password);
                 } else {
@@ -1126,7 +1126,7 @@ class StudentController extends Controller
             }
             if ($request->application_status == 1) {
                 $this->student->builder()->where('user_id', $request->edit_user_id)->withTrashed()->update(['application_status' => 1, 'class_section_id' => $request->class_section_id]);
-                $password = str_replace('-', '', date('d-m-Y', strtotime($user->dob)));
+                $password = $userService->makeStudentPassword($user->dob);
                 $guardian = $this->user->guardian()->where('id', $student->guardian_id)->firstOrFail();
                 $userService->sendRegistrationEmail($guardian, $user, $student->admission_no, $password);
             } else {
