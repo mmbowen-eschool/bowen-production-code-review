@@ -196,6 +196,7 @@ class AssignElectiveSubjectController extends Controller
             $limit = request('limit', 10);
             $sort = request('sort', 'id');
             $order = request('order', 'DESC');
+            $order = in_array(strtoupper($order), ['ASC', 'DESC'], true) ? strtoupper($order) : 'DESC';
             $search = request('search');
             $session_year_id = request('session_year_id');
             $class_section_id = request('class_section_id');

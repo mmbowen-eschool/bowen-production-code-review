@@ -342,6 +342,7 @@ class DriverHelperController extends Controller
         $limit = request('limit', 10);
         $sort = request('sort', 'id');
         $order = request('order', 'DESC');
+        $order = in_array(strtoupper($order), ['ASC', 'DESC'], true) ? strtoupper($order) : 'DESC';
         $session_year_id = request('session_year_id');
 
         $sql = $this->user->builder()
