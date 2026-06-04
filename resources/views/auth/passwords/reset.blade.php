@@ -98,14 +98,14 @@
 
                             <div class="form-group">
                                 <label>{{ __('school_code') }}</label>
-                                <input id="school_code" type="school_code" class="form-control form-control-lg" name="school_code" value="{{ old('school_code') }}" autocomplete="school_code" autofocus placeholder="{{ __('school_code') }}">
+                                <input id="school_code" type="text" class="form-control form-control-lg" name="school_code" value="{{ request('school_code') ?? old('school_code') }}" autocomplete="off" readonly placeholder="{{ __('school_code') }}">
                             </div>
 
                             <div class="form-group">
                                 <label>{{ __('email') }}</label>
                                 <input id="email" type="text" class="form-control form-control-lg" name="email"
-                                       value="{{ old('email') }}" required autocomplete="username" autofocus
-                                       placeholder="{{ __('email') }}">
+                                       value="{{ $email ?? request('email') ?? old('email') }}" required autocomplete="off"
+                                       placeholder="Email / Admission No." readonly>
                             </div>
                             <div class="form-group">
                                 <label>{{ __('password') }}</label>
