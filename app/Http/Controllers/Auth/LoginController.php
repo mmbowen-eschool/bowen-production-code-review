@@ -139,7 +139,7 @@ class LoginController extends Controller
                     ->first();
 
                 if ($data && $school->status == 1) {
-                    if (($data->two_factor_secret == null || $data->two_factor_expires_at == null) && $data->two_factor_enabled == 1 && $request->email != 'demo@school.com' && !env('DEMO_MODE')) {
+                    if (($data->two_factor_secret == null || $data->two_factor_expires_at == null) && $data->two_factor_enabled == 1 && !env('DEMO_MODE')) {
                         $twoFACode = $this->generate2FACode();
                         $settings = $this->cache->getSystemSettings();
                         $user = Auth::user();
@@ -197,7 +197,7 @@ class LoginController extends Controller
                     ->first();
 
                 if ($data) {
-                    if (($data->two_factor_secret == null || $data->two_factor_expires_at == null) && $data->two_factor_enabled == 1 && $request->email != 'demo@school.com' && !env('DEMO_MODE')) {
+                    if (($data->two_factor_secret == null || $data->two_factor_expires_at == null) && $data->two_factor_enabled == 1 && !env('DEMO_MODE')) {
 
                         $twoFACode = $this->generate2FACode();
                         $settings = $this->cache->getSystemSettings();
