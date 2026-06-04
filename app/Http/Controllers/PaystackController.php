@@ -33,6 +33,9 @@ class PaystackController extends Controller
         
         //So that curl_exec returns the contents of the cURL; rather than echoing it
         curl_setopt($ch,CURLOPT_RETURNTRANSFER, true); 
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         
         //execute post
         $response = curl_exec($ch);
@@ -49,6 +52,8 @@ class PaystackController extends Controller
             CURLOPT_ENCODING => "",
             CURLOPT_MAXREDIRS => 10,
             CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "GET",
             CURLOPT_HTTPHEADER => array(
@@ -99,6 +104,9 @@ class PaystackController extends Controller
         
         //So that curl_exec returns the contents of the cURL; rather than echoing it
         curl_setopt($ch,CURLOPT_RETURNTRANSFER, true); 
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         
         //execute post
         $result = curl_exec($ch);
