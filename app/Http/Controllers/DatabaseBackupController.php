@@ -555,6 +555,7 @@ class DatabaseBackupController extends Controller
 
     public function restore(Request $request)
     {
+        ResponseService::noPermissionThenSendJson('database-backup');
         $validator = Validator::make($request->all(), [
             'zip_file' => 'required|mimes:zip',
         ]);
