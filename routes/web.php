@@ -139,11 +139,13 @@ Route::group(['prefix' => 'page/type'], static function () {
     Route::get('/{type?}', [Controller::class, 'systemLinks']);
 });
 
-Route::group(['prefix' => 'install'], static function () {
-    Route::get('purchase-code', [InstallerController::class, 'purchaseCodeIndex'])->name('install.purchase-code.index');
-    Route::post('purchase-code', [InstallerController::class, 'checkPurchaseCode'])->name('install.purchase-code.post');
-    Route::get('php-function', [InstallerController::class, 'phpFunctionIndex'])->name('install.php-function.index');
-});
+if (env('INSTALLER_ENABLED', false)) {
+    Route::group(['prefix' => 'install'], static function () {
+        Route::get('purchase-code', [InstallerController::class, 'purchaseCodeIndex'])->name('install.purchase-code.index');
+        Route::post('purchase-code', [InstallerController::class, 'checkPurchaseCode'])->name('install.purchase-code.post');
+        Route::get('php-function', [InstallerController::class, 'phpFunctionIndex'])->name('install.php-function.index');
+    });
+}
 
 // auth
 Route::group(['middleware' => ['Role', 'checkSchoolStatus', 'status', 'SwitchDatabase', 'verifiedEmail', 'CheckForMaintenanceMode', '2fa', 'wizardSettings']], static function () {
