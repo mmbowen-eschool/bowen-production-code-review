@@ -80,6 +80,7 @@
                                     <a data-value="{child_name}" class="btn btn-gradient-light btn_tag mt-2">{ {{ __('child_name') }} }</a>
                                     <a data-value="{grno}" class="btn btn-gradient-light btn_tag mt-2">{ {{ __('Gr Number') }} }</a>
                                     <a data-value="{child_password}" class="btn btn-gradient-light btn_tag mt-2">{ {{ __('child_password') }} }</a>
+                                    <a data-value="{child_reset_link}" class="btn btn-gradient-light btn_tag mt-2">{ {{ __('child_reset_link') }} }</a>
                                     <a data-value="{admission_no}" class="btn btn-gradient-light btn_tag mt-2">{ {{ __('admission_no') }} }</a>
                                     <a data-value="{android_app}" class="btn btn-gradient-light btn_tag mt-2">{ {{ __('android_app') }} }</a>
                                     <a data-value="{ios_app}" class="btn btn-gradient-light btn_tag mt-2">{ {{ __('ios_app') }} }</a>

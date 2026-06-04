@@ -340,6 +340,21 @@ class UserService {
                 . '&school_code=' . $schoolCode;
         }
 
+        // Generate password reset token for student (sent to guardian email)
+        // Student users.email stores admission_no, not a real email address.
+        // Password::createToken() works correctly because the broker looks up
+        // the user by the email column, which contains the admission_no.
+        $studentUser = $child instanceof \Illuminate\Database\Eloquent\Model
+            ? $child
+            : $this->user->builder()->where('email', $childAdmissionNumber)->first();
+        $childResetUrl = '';
+        if ($studentUser) {
+            $childToken = Password::createToken($studentUser);
+            $childResetUrl = url('/password/reset/' . $childToken)
+                . '?email=' . urlencode($studentUser->email)
+                . '&school_code=' . $schoolCode;
+        }
+
         // Define the placeholders and their replacements
         $placeholders = [
             '{parent_name}' => $guardian->full_name,
@@ -351,7 +366,8 @@ class UserService {
 
             '{child_name}' => $child->full_name,
             '{grno}' => $child->email,
-            '{child_password}' => $childPlainTextPassword,
+            '{child_password}' => "请点击以下链接为您的孩子设置登录密码（链接 60 分钟内有效）：\n{$childResetUrl}",
+            '{child_reset_link}' => $childResetUrl,
             '{admission_no}' => $childAdmissionNumber,
 
             '{support_email}' => $schoolSettings['school_email'] ?? '',

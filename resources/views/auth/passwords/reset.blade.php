@@ -103,8 +103,8 @@
 
                             <div class="form-group">
                                 <label>{{ __('email') }}</label>
-                                <input id="email" type="email" class="form-control form-control-lg" name="email"
-                                       value="{{ old('email') }}" required autocomplete="email" autofocus
+                                <input id="email" type="text" class="form-control form-control-lg" name="email"
+                                       value="{{ old('email') }}" required autocomplete="username" autofocus
                                        placeholder="{{ __('email') }}">
                             </div>
                             <div class="form-group">
