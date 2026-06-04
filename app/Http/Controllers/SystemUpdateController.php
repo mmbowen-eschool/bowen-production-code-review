@@ -93,7 +93,7 @@ class SystemUpdateController extends Controller
                 ResponseService::errorResponse('something_wrong_try_again');
             }
 
-            $zip->extractTo($this->destinationPath);
+            $this->safelyExtractZip($zip, $this->destinationPath);
             $zip->close();
             unlink($filePath);
 
@@ -133,7 +133,7 @@ class SystemUpdateController extends Controller
                 ResponseService::errorResponse('Source Code Zip Extraction Failed');
             }
 
-            $zip1->extractTo($target_path);
+            $this->safelyExtractZip($zip1, $target_path);
             $zip1->close();
 
             Artisan::call('migrate');
@@ -244,4 +244,85 @@ class SystemUpdateController extends Controller
         }
        
     }
+
+    /**
+     * Safely extract ZIP archive entries to a target path.
+     * Validates each entry against path traversal attacks before extraction.
+     *
+     * @param  ZipArchive  $zip
+     * @param  string      $targetPath
+     * @return void
+     * @throws \RuntimeException If any ZIP entry fails validation
+     */
+    private function safelyExtractZip(ZipArchive $zip, string $targetPath): void
+    {
+        $targetPath = rtrim(str_replace('\\', '/', $targetPath), '/');
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entry = $zip->getNameIndex($i);
+
+            // Reject empty entry names
+            if ($entry === false || $entry === '') {
+                throw new \RuntimeException('Invalid ZIP entry: empty name');
+            }
+
+            // Reject null byte injection
+            if (strpos($entry, "\0") !== false) {
+                throw new \RuntimeException('Invalid ZIP entry: null byte detected');
+            }
+
+            // Reject absolute Unix paths (e.g. /etc/passwd)
+            if (isset($entry[0]) && ($entry[0] === '/' || $entry[0] === '\\')) {
+                throw new \RuntimeException('Invalid ZIP entry: absolute path');
+            }
+
+            // Reject Windows absolute paths (e.g. C:\Windows\...)
+            if (preg_match('#^[A-Za-z]:[\\\\/]#', $entry)) {
+                throw new \RuntimeException('Invalid ZIP entry: Windows absolute path');
+            }
+
+            // Normalize backslashes to forward slashes
+            $entry = str_replace('\\', '/', $entry);
+
+            // Reject path traversal via .. segments
+            $segments = explode('/', $entry);
+            foreach ($segments as $segment) {
+                if ($segment === '..') {
+                    throw new \RuntimeException('Invalid ZIP entry: path traversal detected');
+                }
+            }
+
+            // Build resolved path and verify it stays within targetPath
+            $resolvedPath = $targetPath . '/' . $entry;
+            $resolvedPath = preg_replace('#/+#', '/', $resolvedPath);
+
+            if (strpos($resolvedPath, $targetPath . '/') !== 0) {
+                throw new \RuntimeException('Invalid ZIP entry: path escape detected');
+            }
+
+            // Directory entries (trailing slash)
+            if (substr($entry, -1) === '/') {
+                if (!is_dir($resolvedPath) && !@mkdir($resolvedPath, 0755, true)) {
+                    throw new \RuntimeException("Invalid ZIP entry: mkdir failed for '{$entry}'");
+                }
+                continue;
+            }
+
+            // Ensure parent directory exists before writing file
+            $parentDir = dirname($resolvedPath);
+            if (!is_dir($parentDir) && !@mkdir($parentDir, 0755, true)) {
+                throw new \RuntimeException("Invalid ZIP entry: mkdir parent failed for '{$entry}'");
+            }
+
+            // Extract file content safely
+            $content = $zip->getFromIndex($i);
+            if ($content === false) {
+                throw new \RuntimeException("Invalid ZIP entry: read failed for '{$entry}'");
+            }
+            if (file_put_contents($resolvedPath, $content) === false) {
+                throw new \RuntimeException("Invalid ZIP entry: write failed for '{$entry}'");
+            }
+        }
+    }
+
 }
