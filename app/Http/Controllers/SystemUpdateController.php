@@ -72,7 +72,7 @@ class SystemUpdateController extends Controller
                 ResponseService::errorResponse($response["message"]);
             }
 
-            if (!is_dir($this->destinationPath) && !mkdir($concurrentDirectory = $this->destinationPath, 0777, TRUE) && !is_dir($concurrentDirectory)) {
+            if (!is_dir($this->destinationPath) && !mkdir($concurrentDirectory = $this->destinationPath, 0755, TRUE) && !is_dir($concurrentDirectory)) {
                 //sprintf('Directory "%s" was not created', $concurrentDirectory)
                 ResponseService::errorResponse("Permission Error while crating Temp Directory");
             }
