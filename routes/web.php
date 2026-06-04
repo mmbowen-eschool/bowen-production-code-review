@@ -113,7 +113,6 @@ Route::post('/2fa-code', [AuthController::class, 'twoFactorAuthenticationCode'])
 
 Route::post('schools/registration', [SchoolController::class, 'registration']);
 Route::post('contact', [Controller::class, 'contact']);
-Route::get('subscription/cron-job', [Controller::class, 'cron_job']);
 Route::get('set-language/{lang}', [LanguageController::class, 'set_language']);
 
 Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
