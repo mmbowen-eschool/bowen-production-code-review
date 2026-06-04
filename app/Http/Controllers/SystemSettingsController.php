@@ -878,6 +878,8 @@ class SystemSettingsController extends Controller {
 
     public function serverConfigurationUpdate(Request $request)
     {
+        ResponseService::noPermissionThenSendJson('system-setting-manage');
+
         $request->validate([
             'name' => 'required',
         ]);

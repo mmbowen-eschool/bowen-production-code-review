@@ -433,7 +433,7 @@ class StaffApiController extends Controller
                             ->orwhere('mobile', 'LIKE', "%$request->search%")
                             ->orwhere('email', 'LIKE', "%$request->search%")
                             ->orwhere('gender', 'LIKE', "%$request->search%")
-                            ->orWhereRaw('concat(first_name," ",last_name) like ?', "%$request->search%");
+                            ->orWhereRaw('concat(first_name," ",last_name) like ?', ['%' . $request->search . '%']);
                     });
                 }
 
@@ -523,7 +523,7 @@ class StaffApiController extends Controller
                             ->orwhere('mobile', 'LIKE', "%$request->search%")
                             ->orwhere('email', 'LIKE', "%$request->search%")
                             ->orwhere('gender', 'LIKE', "%$request->search%")
-                            ->orWhereRaw('concat(first_name," ",last_name) like ?', "%$request->search%");
+                            ->orWhereRaw('concat(first_name," ",last_name) like ?', ['%' . $request->search . '%']);
                     });
                 }
 

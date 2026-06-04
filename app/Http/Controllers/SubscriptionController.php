@@ -1468,6 +1468,7 @@ class SubscriptionController extends Controller
 
     public function trash_bill($id)
     {
+        ResponseService::noPermissionThenSendJson('subscription-change-bills');
         try {
             $subscriptionBill = $this->subscriptionBill->findById($id);
             $subscriptionBill->delete();

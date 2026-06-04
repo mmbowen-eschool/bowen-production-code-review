@@ -20,7 +20,7 @@ class CheckTwoFactorAuthenticated
     public function handle(Request $request, Closure $next): Response
     {
 
-        if(Auth::user() && Auth::user()->hasRole('School Admin') && Auth::user()->hasRole('Super Admin') ) {
+        if(Auth::user() && Auth::user()->hasAnyRole(['School Admin', 'Super Admin']) ) {
             
             $user = DB::table('users')->where('id',Auth::user()->id)->first();
             $currentTime = now()->format('Y-m-d H:i:s');
