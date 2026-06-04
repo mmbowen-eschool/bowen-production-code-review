@@ -134,7 +134,7 @@ class StaffImport implements ToCollection, WithHeadingRow
                 if ($users->school_id) {
                     $sendEmail = app(UserService::class);
                     if ($this->is_send_notification) {
-                        $sendEmail->sendStaffRegistrationEmail($users, $users->mobile);
+                        $sendEmail->sendStaffRegistrationEmail($users);
                     }
                 }
 

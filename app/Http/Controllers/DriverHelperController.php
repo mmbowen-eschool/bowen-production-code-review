@@ -316,7 +316,7 @@ class DriverHelperController extends Controller
 
             if ($user->school_id) {
                 $sendEmail = app(UserService::class);
-                $sendEmail->sendStaffRegistrationEmail($user, $user->mobile);
+                $sendEmail->sendStaffRegistrationEmail($user);
             }
 
             ResponseService::successResponse('Data Stored Successfully');

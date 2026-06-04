@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 use JsonException;
 use Throwable;
 
@@ -355,12 +356,12 @@ class UserService {
         return $templateContent;
     }
 
-    public function sendStaffRegistrationEmail($user, $password)
+    public function sendStaffRegistrationEmail($user)
     {
         try {
             $cache = app(CachingService::class);
             $schoolSettings = $cache->getSchoolSettings();
-            $email_body = $this->replaceStaffPlaceholders($user, $password, $schoolSettings);
+            $email_body = $this->replaceStaffPlaceholders($user, $schoolSettings);
             $data = [
                 'subject'     => 'Welcome to ' . $schoolSettings['school_name'],
                 'email'       => $user->email,
@@ -379,19 +380,28 @@ class UserService {
         }
     }
 
-    private function replaceStaffPlaceholders($user, $password, $schoolSettings)
+    private function replaceStaffPlaceholders($user, $schoolSettings)
     {
 
         $cache = app(CachingService::class);
         $systemSettings = $cache->getSystemSettings();
 
         $templateContent = $schoolSettings['email-template-staff'] ?? '';
+
+        // Generate password reset token and reset link
+        $token = Password::createToken($user);
+        $schoolCode = $user->school->code ?? Auth::user()->school->code;
+        $resetUrl = url('/password/reset/' . $token)
+            . '?email=' . urlencode($user->email)
+            . '&school_code=' . $schoolCode;
+
         // Define the placeholders and their replacements
         $placeholders = [
             '{full_name}' => $user->full_name,
-            '{code}' => Auth::user()->school->code,
+            '{code}' => $schoolCode,
             '{email}' => $user->email,
-            '{password}' => $password,
+            '{password}' => "请点击以下链接设置您的登录密码（链接 60 分钟内有效）：\n{$resetUrl}",
+            '{reset_link}' => $resetUrl,
             '{school_name}' => $schoolSettings['school_name'],
             
             '{support_email}' => $schoolSettings['school_email'] ?? '',

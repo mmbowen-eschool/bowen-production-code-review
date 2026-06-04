@@ -227,7 +227,7 @@ class TeacherController extends Controller {
 
             DB::commit();
             $sendEmail = app(UserService::class);
-            $sendEmail->sendStaffRegistrationEmail($user, $request->mobile);
+            $sendEmail->sendStaffRegistrationEmail($user);
             DB::commit();
             ResponseService::successResponse('Data Stored Successfully');
         } catch (Throwable $e) {

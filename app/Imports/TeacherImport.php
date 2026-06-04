@@ -172,7 +172,7 @@ class TeacherImport implements ToCollection, WithHeadingRow
 
                 $sendEmail = app(UserService::class);
                 if ($this->is_send_notification) {
-                    $sendEmail->sendStaffRegistrationEmail($users, $row['mobile']);
+                    $sendEmail->sendStaffRegistrationEmail($users);
                 }
 
             } catch (Throwable $e) {
