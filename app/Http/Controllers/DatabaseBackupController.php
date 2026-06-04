@@ -596,7 +596,7 @@ class DatabaseBackupController extends Controller
                 // Un-Zip and move data
                 if ($zip->open($request->zip_file) === TRUE) {
 
-                    $zip->extractTo($backup_folder_path);
+                    $this->safelyExtractZip($zip, $backup_folder_path);
                     $mainfolders = File::directories($backup_folder_path);
 
                     foreach ($mainfolders as $subfolder) {
@@ -748,7 +748,7 @@ class DatabaseBackupController extends Controller
                 // Un-Zip and move data
                 if ($zip->open($request->zip_file) === TRUE) {
 
-                    $zip->extractTo($backup_folder_path);
+                    $this->safelyExtractZip($zip, $backup_folder_path);
                     $mainfolders = File::directories($backup_folder_path);
 
                     foreach ($mainfolders as $subfolder) {
@@ -915,6 +915,86 @@ class DatabaseBackupController extends Controller
             Stream::where('school_id', $schoolId)->delete();
             Subscription::where('school_id', $schoolId)->delete();
             PaymentTransaction::where('school_id', $schoolId)->delete();
+        }
+    }
+
+    /**
+     * Safely extract ZIP archive entries to a target path.
+     * Validates each entry against path traversal attacks before extraction.
+     *
+     * @param  ZipArchive  $zip
+     * @param  string      $targetPath
+     * @return void
+     * @throws \RuntimeException If any ZIP entry fails validation
+     */
+    private function safelyExtractZip(ZipArchive $zip, string $targetPath): void
+    {
+        $targetPath = rtrim(str_replace('\\', '/', $targetPath), '/');
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entry = $zip->getNameIndex($i);
+
+            // Reject empty entry names
+            if ($entry === false || $entry === '') {
+                throw new \RuntimeException('Invalid ZIP entry: empty name');
+            }
+
+            // Reject null byte injection
+            if (strpos($entry, "\0") !== false) {
+                throw new \RuntimeException('Invalid ZIP entry: null byte detected');
+            }
+
+            // Reject absolute Unix paths (e.g. /etc/passwd)
+            if (isset($entry[0]) && ($entry[0] === '/' || $entry[0] === '\\')) {
+                throw new \RuntimeException('Invalid ZIP entry: absolute path');
+            }
+
+            // Reject Windows absolute paths (e.g. C:\Windows\...)
+            if (preg_match('#^[A-Za-z]:[\\\\/]#', $entry)) {
+                throw new \RuntimeException('Invalid ZIP entry: Windows absolute path');
+            }
+
+            // Normalize backslashes to forward slashes
+            $entry = str_replace('\\', '/', $entry);
+
+            // Reject path traversal via .. segments
+            $segments = explode('/', $entry);
+            foreach ($segments as $segment) {
+                if ($segment === '..') {
+                    throw new \RuntimeException('Invalid ZIP entry: path traversal detected');
+                }
+            }
+
+            // Build resolved path and verify it stays within targetPath
+            $resolvedPath = $targetPath . '/' . $entry;
+            $resolvedPath = preg_replace('#/+#', '/', $resolvedPath);
+
+            if (strpos($resolvedPath, $targetPath . '/') !== 0) {
+                throw new \RuntimeException('Invalid ZIP entry: path escape detected');
+            }
+
+            // Directory entries (trailing slash)
+            if (substr($entry, -1) === '/') {
+                if (!is_dir($resolvedPath) && !@mkdir($resolvedPath, 0755, true)) {
+                    throw new \RuntimeException("Invalid ZIP entry: mkdir failed for '{$entry}'");
+                }
+                continue;
+            }
+
+            // Ensure parent directory exists before writing file
+            $parentDir = dirname($resolvedPath);
+            if (!is_dir($parentDir) && !@mkdir($parentDir, 0755, true)) {
+                throw new \RuntimeException("Invalid ZIP entry: mkdir parent failed for '{$entry}'");
+            }
+
+            // Extract file content safely
+            $content = $zip->getFromIndex($i);
+            if ($content === false) {
+                throw new \RuntimeException("Invalid ZIP entry: read failed for '{$entry}'");
+            }
+            if (file_put_contents($resolvedPath, $content) === false) {
+                throw new \RuntimeException("Invalid ZIP entry: write failed for '{$entry}'");
+            }
         }
     }
 }
