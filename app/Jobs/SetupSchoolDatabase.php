@@ -138,12 +138,32 @@ final class SetupSchoolDatabase implements ShouldQueue
     {
         $templateContent = $settings['email_template_school_registration'] ?? '';
 
-        // Generate password reset token and reset link (instead of sending plain mobile as password)
-        $token = Password::createToken($user);
-        $resetUrl = url('/password/reset/' . $token)
-            . '?email=' . urlencode($user->email)
-            . '&school_code=' . $schoolCode;
-        
+        // Ensure database connection is switched to the school database so the token
+        // is stored in the school's password_resets table (not the main database).
+        $previousConnection = DB::getDefaultConnection();
+        $switched = !empty($school->database_name);
+        if ($switched) {
+            DB::setDefaultConnection('school');
+            Config::set('database.connections.school.database', $school->database_name);
+            DB::purge('school');
+            DB::connection('school')->reconnect();
+            DB::setDefaultConnection('school');
+        }
+
+        try {
+            // Generate password reset token and reset link (instead of sending plain mobile as password)
+            $token = Password::createToken($user);
+            $resetUrl = url('/password/reset/' . $token)
+                . '?email=' . urlencode($user->email)
+                . '&school_code=' . $schoolCode;
+        } finally {
+            // Restore previous database connection even if token generation fails
+            if ($switched && $previousConnection !== 'school') {
+                DB::setDefaultConnection($previousConnection);
+                DB::purge('school');
+            }
+        }
+
         $placeholders = [
             '{school_admin_name}' => $user->full_name,
             '{code}' => $schoolCode,

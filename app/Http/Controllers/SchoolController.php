@@ -303,11 +303,33 @@ class SchoolController extends Controller
     {
         $templateContent = $settings['email_template_school_registration'] ?? '';
 
-        // Generate password reset token and reset link (instead of sending plain mobile as password)
-        $token = Password::createToken($user);
-        $resetUrl = url('/password/reset/' . $token)
-            . '?email=' . urlencode($user->email)
-            . '&school_code=' . $school_code;
+        // Switch to school database so the token is stored in the school's
+        // password_resets table (not the main database). Otherwise,
+        // ResetPasswordController (which reads from school db) won't find it.
+        $previousConnection = DB::getDefaultConnection();
+        $schoolModel = School::where('code', $school_code)->first();
+        $switched = $schoolModel && $schoolModel->database_name;
+        if ($switched) {
+            DB::setDefaultConnection('school');
+            Config::set('database.connections.school.database', $schoolModel->database_name);
+            DB::purge('school');
+            DB::connection('school')->reconnect();
+            DB::setDefaultConnection('school');
+        }
+
+        try {
+            // Generate password reset token and reset link (instead of sending plain mobile as password)
+            $token = Password::createToken($user);
+            $resetUrl = url('/password/reset/' . $token)
+                . '?email=' . urlencode($user->email)
+                . '&school_code=' . $school_code;
+        } finally {
+            // Restore previous database connection even if token generation fails
+            if ($switched && $previousConnection !== 'school') {
+                DB::setDefaultConnection($previousConnection);
+                DB::purge('school');
+            }
+        }
 
         // Define the placeholders and their replacements
         $placeholders = [
