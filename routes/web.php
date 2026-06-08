@@ -117,6 +117,10 @@ Route::get('set-language/{lang}', [LanguageController::class, 'set_language']);
 
 Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
 
+// DingTalk OAuth
+Route::get('dingtalk/login', [\App\Http\Controllers\Auth\DingTalkLoginController::class, 'login'])->name('dingtalk.login');
+Route::get('dingtalk/callback', [\App\Http\Controllers\Auth\DingTalkLoginController::class, 'callback'])->name('dingtalk.callback');
+
 Route::get('students/admission-form', [StudentController::class, 'admissionForm'])->name('admission.form');
 Route::get('email/verify', [Controller::class, 'emailVerify']);
 

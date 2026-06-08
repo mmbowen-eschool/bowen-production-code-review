@@ -33,6 +33,13 @@ return [
     'recaptcha' => [
         'key' => env('RECAPTCHA_SITE_KEY'),
         'secret' => env('RECAPTCHA_SECRET_KEY'),
-    ]
+    ],
+
+    'dingtalk' => [
+        'client_id' => env('DINGTALK_CLIENT_ID'),
+        'client_secret' => env('DINGTALK_CLIENT_SECRET'),
+        'corp_id' => env('DINGTALK_CORP_ID'),
+        'redirect_uri' => env('DINGTALK_REDIRECT_URI'),
+    ],
 
 ];
