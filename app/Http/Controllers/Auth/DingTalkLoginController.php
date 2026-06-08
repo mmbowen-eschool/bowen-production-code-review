@@ -160,7 +160,7 @@ class DingTalkLoginController extends Controller
                 }
 
                 // ===== Phase 3C: 自动登录 =====
-                return $this->autoLogin($binding, $schoolId, $schoolCode, $schoolDatabaseName);
+                return $this->autoLogin($request, $binding, $schoolId, $schoolCode, $schoolDatabaseName);
             }
 
             // 4. 无绑定 → 保存钉钉信息到 session（school_id/school_code 来自已验证的 session）
@@ -189,7 +189,7 @@ class DingTalkLoginController extends Controller
      * - Session::put('school_database_name', ...) 供 SwitchDatabase middleware 使用
      * - Auth::login() + redirect /dashboard
      */
-    private function autoLogin(DingTalkBinding $binding, $schoolId, $schoolCode, $schoolDatabaseName)
+    private function autoLogin(Request $request, DingTalkBinding $binding, $schoolId, $schoolCode, $schoolDatabaseName)
     {
         // 1. 切换到学校数据库
         Config::set('database.connections.school.database', $schoolDatabaseName);
@@ -230,22 +230,29 @@ class DingTalkLoginController extends Controller
                 return response('Bound account is deactivated.', 403);
             }
 
-            // 5. Laravel Auth 登录
-            Auth::login($user);
-
-            // 6. 设置 session（与 LoginController 一致）
-            session(['user_id' => $user->id]);
-            session(['user_email' => $user->email]);
-
-            // school_database_name 供 SwitchDatabase middleware 使用
-            Session::put('school_database_name', $schoolDatabaseName);
+            // 5. 设置 session（在 Auth::login 之前，与 LoginController 顺序一致）
+            // db_connection_name 必须设置：User::getConnectionName() 依赖它选择正确的数据库连接
+            session(['db_connection_name' => 'school']);
+            session(['user_id'             => $user->id]);
+            session(['user_email'          => $user->email]);
+            session(['school_id'           => $schoolId]);
+            session(['school_code'         => $schoolCode]);
 
             session()->save();
 
-            // 7. 更新最后登录时间
+            // 6. Laravel Auth 登录
+            Auth::login($user);
+
+            // 7. 防止 session fixation
+            $request->session()->regenerate();
+
+            // school_database_name 供 CheckRole / SwitchDatabase middleware 在下一次请求中重新配置
+            Session::put('school_database_name', $schoolDatabaseName);
+
+            // 8. 更新最后登录时间
             $binding->update(['last_login_at' => now()]);
 
-            // 8. 清除 DingTalk 相关 session（保留 login 相关 session）
+            // 9. 清除 DingTalk 相关 session（保留 login 相关 session）
             session()->forget([
                 'dingtalk_pending_open_id',
                 'dingtalk_pending_union_id',
@@ -261,8 +268,7 @@ class DingTalkLoginController extends Controller
                 'user_id'     => $user->id,
             ]);
 
-            // 9. 跳转 dashboard
-            // 不恢复默认连接 — SwitchDatabase middleware 在下一次请求中重新配置
+            // 10. 跳转 dashboard
             return redirect('/dashboard');
 
         } catch (\Throwable $e) {
