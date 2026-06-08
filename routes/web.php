@@ -120,6 +120,8 @@ Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('
 // DingTalk OAuth
 Route::get('dingtalk/login', [\App\Http\Controllers\Auth\DingTalkLoginController::class, 'login'])->name('dingtalk.login');
 Route::get('dingtalk/callback', [\App\Http\Controllers\Auth\DingTalkLoginController::class, 'callback'])->name('dingtalk.callback');
+Route::get('dingtalk/bind', [\App\Http\Controllers\Auth\DingTalkLoginController::class, 'bindForm'])->name('dingtalk.bind');
+Route::post('dingtalk/bind', [\App\Http\Controllers\Auth\DingTalkLoginController::class, 'bind'])->name('dingtalk.bind.submit');
 
 Route::get('students/admission-form', [StudentController::class, 'admissionForm'])->name('admission.form');
 Route::get('email/verify', [Controller::class, 'emailVerify']);
