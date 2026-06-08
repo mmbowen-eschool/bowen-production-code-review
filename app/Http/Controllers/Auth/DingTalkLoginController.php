@@ -78,12 +78,18 @@ class DingTalkLoginController extends Controller
             }
 
             // 2. 用 userAccessToken 获取用户信息
-            $userResponse = Http::withToken($accessToken)
-                ->get(self::USERINFO_URL);
+            // 钉钉要求 x-acs-dingtalk-access-token，不能用 Authorization: Bearer
+            $userResponse = Http::withHeaders([
+                'x-acs-dingtalk-access-token' => $accessToken,
+                'Accept' => 'application/json',
+            ])->get(self::USERINFO_URL);
 
             if (!$userResponse->successful()) {
+                $errBody = $userResponse->json();
                 Log::error('DingTalk user info request failed', [
-                    'status' => $userResponse->status(),
+                    'status'    => $userResponse->status(),
+                    'err_code'  => $errBody['code'] ?? null,
+                    'err_msg'   => $errBody['message'] ?? null,
                 ]);
                 return response('DingTalk user info fetch FAILED (userinfo).', 500);
             }
