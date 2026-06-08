@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class DingTalkLoginController extends Controller
 {
-    /**
-     * OAuth 授权地址（钉钉官方）
-     */
     private const AUTH_URL = 'https://login.dingtalk.com/oauth2/auth';
+    private const TOKEN_URL = 'https://api.dingtalk.com/v1.0/oauth2/userAccessToken';
+    private const USERINFO_URL = 'https://api.dingtalk.com/v1.0/contact/users/me';
 
     /**
      * Step 1: 生成 state，保存到 session，跳转钉钉授权页。
@@ -34,7 +35,7 @@ class DingTalkLoginController extends Controller
     }
 
     /**
-     * Step 2: 钉钉回调，验证 state 并展示 authCode。
+     * Step 2: 钉钉回调，用 authCode 换取 userAccessToken，再获取用户信息。
      */
     public function callback(Request $request)
     {
@@ -52,7 +53,62 @@ class DingTalkLoginController extends Controller
             return response('Missing authCode from DingTalk callback.', 400);
         }
 
-        // Phase 1: 仅展示收到 authCode，不做任何登录操作
-        return response('DingTalk OAuth callback OK. authCode received (length: ' . strlen($authCode) . ').');
+        try {
+            // 1. 用 authCode 换取 userAccessToken
+            $tokenResponse = Http::asJson()->post(self::TOKEN_URL, [
+                'clientId'     => config('services.dingtalk.client_id'),
+                'clientSecret' => config('services.dingtalk.client_secret'),
+                'code'         => $authCode,
+                'grantType'    => 'authorization_code',
+            ]);
+
+            if (!$tokenResponse->successful()) {
+                Log::error('DingTalk token request failed', [
+                    'status' => $tokenResponse->status(),
+                ]);
+                return response('DingTalk user info fetch FAILED (token).', 500);
+            }
+
+            $tokenData = $tokenResponse->json();
+            $accessToken = $tokenData['accessToken'] ?? null;
+
+            if (empty($accessToken)) {
+                Log::error('DingTalk token response missing accessToken');
+                return response('DingTalk user info fetch FAILED (token).', 500);
+            }
+
+            // 2. 用 userAccessToken 获取用户信息
+            $userResponse = Http::withToken($accessToken)
+                ->get(self::USERINFO_URL);
+
+            if (!$userResponse->successful()) {
+                Log::error('DingTalk user info request failed', [
+                    'status' => $userResponse->status(),
+                ]);
+                return response('DingTalk user info fetch FAILED (userinfo).', 500);
+            }
+
+            $userData = $userResponse->json();
+
+            // 3. 仅展示脱敏结果，不做登录
+            $openId  = $userData['openId'] ?? null;
+            $unionId = $userData['unionId'] ?? null;
+            $nick    = $userData['nick'] ?? null;
+
+            $lines = [
+                'DingTalk user info fetch OK.',
+                'openId:  ' . ($openId ? 'YES' : 'NO'),
+                'unionId: ' . ($unionId ? 'YES' : 'NO'),
+                'nick:    ' . ($nick ? 'YES (' . mb_strlen($nick) . ' chars)' : 'NO'),
+            ];
+
+            return response(implode("\n", $lines));
+
+        } catch (\Throwable $e) {
+            Log::error('DingTalk callback exception', [
+                'message' => $e->getMessage(),
+            ]);
+            return response('DingTalk user info fetch FAILED (exception).', 500);
+        }
     }
 }
