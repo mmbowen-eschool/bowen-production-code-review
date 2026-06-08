@@ -135,7 +135,9 @@ class DingTalkLoginController extends Controller
 
         } catch (\Throwable $e) {
             Log::error('DingTalk callback exception', [
-                'message' => $e->getMessage(),
+                'stage'   => 'callback',
+                'class'   => get_class($e),
+                'code'    => $e->getCode(),
             ]);
             return response('DingTalk user info fetch FAILED (exception).', 500);
         }

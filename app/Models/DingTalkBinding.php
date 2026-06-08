@@ -11,6 +11,11 @@ class DingTalkBinding extends Model
      */
     protected $connection = 'mysql';
 
+    /**
+     * 显式指定表名，避免 Laravel 自动推导为 ding_talk_bindings。
+     */
+    protected $table = 'dingtalk_bindings';
+
     protected $fillable = [
         'dingtalk_open_id',
         'dingtalk_union_id',
