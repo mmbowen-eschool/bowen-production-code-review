@@ -7,11 +7,13 @@ use App\Models\DingTalkBinding;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 
 class DingTalkLoginController extends Controller
@@ -73,6 +75,9 @@ class DingTalkLoginController extends Controller
 
     /**
      * Step 2: 钉钉回调，用 authCode 换取 userAccessToken，再获取用户信息。
+     *
+     * 已绑定 → 自动登录并跳转 /dashboard。
+     * 未绑定 → 跳转绑定页。
      */
     public function callback(Request $request)
     {
@@ -91,8 +96,9 @@ class DingTalkLoginController extends Controller
         }
 
         // 从 session 读取已验证的学校信息
-        $schoolId   = session('dingtalk_school_id');
-        $schoolCode = session('dingtalk_school_code');
+        $schoolId           = session('dingtalk_school_id');
+        $schoolCode         = session('dingtalk_school_code');
+        $schoolDatabaseName = session('dingtalk_school_database_name');
 
         if (empty($schoolId)) {
             return response('DingTalk school session expired.', 400);
@@ -153,12 +159,8 @@ class DingTalkLoginController extends Controller
                     return response('This DingTalk account is not bound to this school.', 403);
                 }
 
-                $lines = [
-                    'DingTalk binding found.',
-                    'school_id: ' . ($binding->school_id ? 'YES' : 'NO'),
-                    'user_id:   ' . ($binding->user_id ? 'YES' : 'NO'),
-                ];
-                return response(implode("\n", $lines));
+                // ===== Phase 3C: 自动登录 =====
+                return $this->autoLogin($binding, $schoolId, $schoolCode, $schoolDatabaseName);
             }
 
             // 4. 无绑定 → 保存钉钉信息到 session（school_id/school_code 来自已验证的 session）
@@ -177,6 +179,99 @@ class DingTalkLoginController extends Controller
                 'code'    => $e->getCode(),
             ]);
             return response('DingTalk user info fetch FAILED (exception).', 500);
+        }
+    }
+
+    /**
+     * 已绑定用户自动登录 eSchool。
+     *
+     * 复用 LoginController 的 session 设置模式：
+     * - Session::put('school_database_name', ...) 供 SwitchDatabase middleware 使用
+     * - Auth::login() + redirect /dashboard
+     */
+    private function autoLogin(DingTalkBinding $binding, $schoolId, $schoolCode, $schoolDatabaseName)
+    {
+        // 1. 切换到学校数据库
+        Config::set('database.connections.school.database', $schoolDatabaseName);
+        DB::purge('school');
+        DB::reconnect('school');
+        DB::setDefaultConnection('school');
+
+        try {
+            // 2. 在学校库查找绑定用户
+            $user = User::where('id', $binding->user_id)->first();
+
+            if (!$user) {
+                Log::warning('DingTalk auto-login: bound user not found', [
+                    'school_code' => $schoolCode,
+                    'school_id'   => $schoolId,
+                    'user_id'     => $binding->user_id,
+                ]);
+                return response('Bound eSchool user not found.', 403);
+            }
+
+            // 3. 必须是 Teacher（不允许 Student/Guardian web 登录）
+            if (!$user->hasRole('Teacher')) {
+                Log::warning('DingTalk auto-login: bound account is not a teacher', [
+                    'school_code' => $schoolCode,
+                    'school_id'   => $schoolId,
+                    'user_id'     => $user->id,
+                ]);
+                return response('Bound account is not a teacher.', 403);
+            }
+
+            // 4. 检查账号状态（与 Status middleware 一致：status 必须为 1）
+            if ($user->status != 1) {
+                Log::warning('DingTalk auto-login: account deactivated', [
+                    'school_code' => $schoolCode,
+                    'school_id'   => $schoolId,
+                    'user_id'     => $user->id,
+                ]);
+                return response('Bound account is deactivated.', 403);
+            }
+
+            // 5. Laravel Auth 登录
+            Auth::login($user);
+
+            // 6. 设置 session（与 LoginController 一致）
+            session(['user_id' => $user->id]);
+            session(['user_email' => $user->email]);
+
+            // school_database_name 供 SwitchDatabase middleware 使用
+            Session::put('school_database_name', $schoolDatabaseName);
+
+            session()->save();
+
+            // 7. 更新最后登录时间
+            $binding->update(['last_login_at' => now()]);
+
+            // 8. 清除 DingTalk 相关 session（保留 login 相关 session）
+            session()->forget([
+                'dingtalk_pending_open_id',
+                'dingtalk_pending_union_id',
+                'dingtalk_pending_nick',
+                'dingtalk_school_id',
+                'dingtalk_school_code',
+                'dingtalk_school_database_name',
+            ]);
+
+            Log::info('DingTalk auto-login successful', [
+                'school_code' => $schoolCode,
+                'school_id'   => $schoolId,
+                'user_id'     => $user->id,
+            ]);
+
+            // 9. 跳转 dashboard
+            // 不恢复默认连接 — SwitchDatabase middleware 在下一次请求中重新配置
+            return redirect('/dashboard');
+
+        } catch (\Throwable $e) {
+            Log::error('DingTalk auto-login exception', [
+                'stage'   => 'auto-login',
+                'class'   => get_class($e),
+                'code'    => $e->getCode(),
+            ]);
+            return response('DingTalk auto-login failed.', 500);
         }
     }
 
