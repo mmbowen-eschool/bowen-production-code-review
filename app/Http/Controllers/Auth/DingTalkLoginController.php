@@ -23,19 +23,41 @@ class DingTalkLoginController extends Controller
     /**
      * Step 1: 生成 state，保存到 session，跳转钉钉授权页。
      *
-     * 可选 query: ?school_code=XXX，用于知道用户从哪个学校入口进入。
+     * 要求: ?school_code=XXX 必须存在且有效。
      */
     public function login(Request $request)
     {
+        // 1. school_code 必须存在
+        $rawSchoolCode = $request->query('school_code');
+
+        if (empty($rawSchoolCode)) {
+            return response('Missing school_code.', 400);
+        }
+
+        // 2. 在主库验证 school_code，获取完整学校信息
+        $school = School::on('mysql')->where('code', $rawSchoolCode)->first();
+
+        if (!$school) {
+            return response('Invalid school_code.', 400);
+        }
+
+        // 3. 存入 session 的学校信息全部来自 DB 查询，不信任 raw input
+        session([
+            'dingtalk_school_id'            => $school->id,
+            'dingtalk_school_code'          => $school->code,
+            'dingtalk_school_database_name' => $school->database_name,
+        ]);
+
+        // 清除之前可能残留的 pending 绑定信息
+        session()->forget([
+            'dingtalk_pending_open_id',
+            'dingtalk_pending_union_id',
+            'dingtalk_pending_nick',
+        ]);
+
+        // 4. 生成 OAuth state 并跳转
         $state = Str::random(32);
         session(['dingtalk_oauth_state' => $state]);
-
-        // 如果 URL 携带 school_code，存入 session 以便 callback 使用
-        if ($schoolCode = $request->query('school_code')) {
-            session(['dingtalk_school_code' => $schoolCode]);
-        } else {
-            session()->forget('dingtalk_school_code');
-        }
 
         $query = http_build_query([
             'redirect_uri'  => config('services.dingtalk.redirect_uri'),
@@ -66,6 +88,14 @@ class DingTalkLoginController extends Controller
 
         if (empty($authCode)) {
             return response('Missing authCode from DingTalk callback.', 400);
+        }
+
+        // 从 session 读取已验证的学校信息
+        $schoolId   = session('dingtalk_school_id');
+        $schoolCode = session('dingtalk_school_code');
+
+        if (empty($schoolId)) {
+            return response('DingTalk school session expired.', 400);
         }
 
         try {
@@ -114,10 +144,15 @@ class DingTalkLoginController extends Controller
             $unionId = $userData['unionId'] ?? null;
             $nick    = $userData['nick'] ?? null;
 
-            // 3. 检查主库中是否已有绑定
+            // 3. 查询绑定记录
             $binding = DingTalkBinding::where('dingtalk_open_id', $openId)->first();
 
             if ($binding) {
+                // 已绑定，校验 school_id 是否匹配
+                if ($binding->school_id != $schoolId) {
+                    return response('This DingTalk account is not bound to this school.', 403);
+                }
+
                 $lines = [
                     'DingTalk binding found.',
                     'school_id: ' . ($binding->school_id ? 'YES' : 'NO'),
@@ -126,7 +161,7 @@ class DingTalkLoginController extends Controller
                 return response(implode("\n", $lines));
             }
 
-            // 4. 无绑定 → 保存钉钉信息到 session，跳转绑定页
+            // 4. 无绑定 → 保存钉钉信息到 session（school_id/school_code 来自已验证的 session）
             session([
                 'dingtalk_pending_open_id'  => $openId,
                 'dingtalk_pending_union_id' => $unionId,
@@ -176,6 +211,8 @@ class DingTalkLoginController extends Controller
         $pendingOpenId  = session('dingtalk_pending_open_id');
         $pendingUnionId = session('dingtalk_pending_union_id');
         $pendingNick    = session('dingtalk_pending_nick');
+        // 只从 session 取学校信息，不信任 request 参数
+        $schoolId       = session('dingtalk_school_id');
         $schoolCode     = session('dingtalk_school_code');
 
         if (empty($pendingOpenId)) {
@@ -183,18 +220,18 @@ class DingTalkLoginController extends Controller
                 ->with('error', 'DingTalk session expired. Please re-enter from DingTalk.');
         }
 
-        if (empty($schoolCode)) {
+        if (empty($schoolId)) {
             return redirect()->route('dingtalk.bind')
-                ->with('error', 'School code missing. Please re-enter with a valid school_code.');
+                ->with('error', 'School session expired. Please re-enter with a valid school_code.');
         }
 
-        // 1. 在主库查找学校
-        $school = School::on('mysql')->where('code', $schoolCode)->first();
+        // 1. 根据已验证的 school_id 在主库查找学校
+        $school = School::on('mysql')->where('id', $schoolId)->first();
 
         if (!$school) {
-            Log::warning('DingTalk bind: school not found', ['school_code' => $schoolCode]);
+            Log::warning('DingTalk bind: school not found by id', ['school_id' => $schoolId]);
             return redirect()->route('dingtalk.bind')
-                ->with('error', 'Invalid school code.');
+                ->with('error', 'School not found.');
         }
 
         // 2. 切换到学校数据库
@@ -223,12 +260,27 @@ class DingTalkLoginController extends Controller
                     ->with('error', 'Only teacher accounts can bind with DingTalk.');
             }
 
-            // 5. 检查是否已被其他钉钉账号绑定 (school_id + user_id unique)
-            $existing = DingTalkBinding::where('school_id', $school->id)
-                ->where('user_id', $user->id)
+            // 5a. 检查当前 DingTalk 账号是否已绑定其他学校
+            $crossSchool = DingTalkBinding::where('dingtalk_open_id', $pendingOpenId)
+                ->where('school_id', '!=', $school->id)
                 ->first();
 
-            if ($existing) {
+            if ($crossSchool) {
+                Log::warning('DingTalk bind: openId already bound to another school', [
+                    'other_school_id' => $crossSchool->school_id,
+                ]);
+                return redirect()->route('dingtalk.bind')
+                    ->with('error', 'This DingTalk account is already bound to another school.');
+            }
+
+            // 5b. 检查当前 school_id + user_id 是否已被其他 DingTalk 账号绑定
+            $sameUserOtherDingTalk = DingTalkBinding::where('school_id', $school->id)
+                ->where('user_id', $user->id)
+                ->where('dingtalk_open_id', '!=', $pendingOpenId)
+                ->first();
+
+            if ($sameUserOtherDingTalk) {
+                Log::warning('DingTalk bind: eSchool user already bound to another DingTalk account');
                 return redirect()->route('dingtalk.bind')
                     ->with('error', 'This eSchool account is already bound to another DingTalk account.');
             }
@@ -238,24 +290,26 @@ class DingTalkLoginController extends Controller
                 'dingtalk_open_id'  => $pendingOpenId,
                 'dingtalk_union_id' => $pendingUnionId,
                 'school_id'         => $school->id,
-                'school_code'       => $schoolCode,
+                'school_code'       => $school->code,
                 'user_id'           => $user->id,
                 'dingtalk_nick'     => $pendingNick,
                 'last_login_at'     => now(),
             ]);
 
             Log::info('DingTalk binding created', [
-                'school_code' => $schoolCode,
+                'school_code' => $school->code,
                 'school_id'   => $school->id,
                 'user_id'     => $user->id,
             ]);
 
-            // 清除 pending session
+            // 清除所有 DingTalk session
             session()->forget([
                 'dingtalk_pending_open_id',
                 'dingtalk_pending_union_id',
                 'dingtalk_pending_nick',
+                'dingtalk_school_id',
                 'dingtalk_school_code',
+                'dingtalk_school_database_name',
             ]);
 
             return response('DingTalk binding created successfully.');
