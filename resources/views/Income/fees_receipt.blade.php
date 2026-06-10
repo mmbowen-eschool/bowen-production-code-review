@@ -190,6 +190,7 @@
                         $total_fees = 0;
                         $total_optional_fees = 0;
                         $due_charges = 0;
+                        $showMultiCurrency = in_array($feesPaid->transaction_currency ?? '', ['USD', 'CNY']);
                     @endphp
                     <tbody>
                     @php
@@ -212,6 +213,9 @@
                                         </td>
                                         <td class="amount-col">
                                             <span class="money-text">{{ format_money($compulsoryFee->amount) }}</span>
+                                            @if($showMultiCurrency)
+                                            <br><span class="en-small">{{ number_format($feesPaid->original_amount, 2) }} {{ $feesPaid->transaction_currency }} @ {{ number_format($feesPaid->exchange_rate_snapshot, 2) }}</span>
+                                            @endif
                                         </td>
                                     </tr>
                                     @if ($index === count($feesPaid->compulsory_fee) - 1 && $compulsoryFee->due_charges)
@@ -249,6 +253,9 @@
                                     </td>
                                     <td class="amount-col">
                                         <span class="money-text">{{ format_money($compulsoryFee->amount + $compulsoryFee->due_charges) }}</span>
+                                        @if($showMultiCurrency)
+                                        <br><span class="en-small">{{ number_format($feesPaid->original_amount, 2) }} {{ $feesPaid->transaction_currency }} @ {{ number_format($feesPaid->exchange_rate_snapshot, 2) }}</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @endif
@@ -284,7 +291,12 @@
                     <tr class="total-row">
                         <td></td>
                         <td colspan="2" class="text-left"><strong>合计金额 <span class="en-small">/ Total Amount</span></strong></td>
-                        <td class="amount-col"><span class="money-text">{{ format_money($total_fees + $due_charges) }}</span></td>
+                        <td class="amount-col">
+                            <span class="money-text">{{ format_money($feesPaid->amount_mmk ?: ($total_fees + $due_charges)) }}</span>
+                            @if($showMultiCurrency)
+                            <br><span class="en-small">{{ number_format($feesPaid->original_amount, 2) }} {{ $feesPaid->transaction_currency }} @ {{ number_format($feesPaid->exchange_rate_snapshot, 2) }}</span>
+                            @endif
+                        </td>
                     </tr>
 
                     @if (($feesPaid->fees->total_compulsory_fees + $due_charges) != ($total_fees - $total_optional_fees))

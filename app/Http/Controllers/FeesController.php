@@ -1185,7 +1185,7 @@ class FeesController extends Controller
             }
 
             $currencyMap = ['MMK' => 'K', 'CNY' => '¥', 'USD' => '$'];
-            $feeCurrency = $feesPaid->fees->getRawOriginal('currency') ?? 'MMK';
+            $feeCurrency = $feesPaid->transaction_currency ?? $feesPaid->fees->getRawOriginal('currency') ?? 'MMK';
             $currencySymbol = $currencyMap[$feeCurrency] ?? 'K';
 
             $pdf = Pdf::loadView('Income.fees_receipt', compact('school', 'feesPaid', 'student', 'currencySymbol'));
