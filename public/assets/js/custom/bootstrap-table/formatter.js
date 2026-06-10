@@ -914,6 +914,30 @@ function feesPaidAmountFormatter(value, row) {
     return html;
 }
 
+function optionalFeesPaidListAmountFormatter(value, row) {
+    // value = optional_fees_amount（单个 optional item 的 MMK 金额）
+    var amountMmk = parseFloat(value) || 0;
+    var html = formatMoneyJS(amountMmk);
+
+    // 读取整笔付款的多币种信息
+    var currency = '';
+    var orig = 0;
+    var rate = 1;
+    if (row.fees_paid && row.fees_paid.transaction_currency) {
+        currency = row.fees_paid.transaction_currency;
+        orig = parseFloat(row.fees_paid.original_amount) || amountMmk;
+        rate = parseFloat(row.fees_paid.exchange_rate_snapshot) || 1;
+    }
+
+    // 只有 USD/CNY 才显示第二行原币信息
+    if (currency === 'USD' || currency === 'CNY') {
+        html += '<br><small class="text-muted">' +
+            orig.toFixed(2) + ' ' + currency + ' @ ' + rate.toFixed(2) + '</small>';
+    }
+
+    return html;
+}
+
 function manageFeesAmountFormatter(value, row) {
     return formatMoneyJS(value);
 }
