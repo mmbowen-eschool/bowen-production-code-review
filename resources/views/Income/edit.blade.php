@@ -113,13 +113,13 @@
                                             {{-- Fee Original Amount --}}
                                             <div class="form-group col-md-12 col-lg-2">
                                                 <label class="small text-muted">{{ __('Original Amount') }}</label>
-                                                {!! Form::number('fee_original_amount', null, ['class' => 'form-control fee_original_amount', 'placeholder' => '0.00', 'min' => 0, 'step' => '0.01', 'data-convert' => 'number']) !!}
+                                                {!! Form::text('fee_original_amount', null, ['class' => 'form-control fee_original_amount', 'placeholder' => '0.00', 'inputmode' => 'decimal', 'pattern' => '[0-9.]*']) !!}
                                             </div>
 
                                             {{-- Fee Exchange Rate --}}
                                             <div class="form-group col-md-12 col-lg-2">
                                                 <label class="small text-muted">{{ __('Rate to MMK') }}</label>
-                                                {!! Form::number('fee_exchange_rate_snapshot', 1, ['class' => 'form-control fee_exchange_rate_snapshot', 'placeholder' => 'Rate', 'min' => 0.0001, 'step' => '0.0001', 'readonly']) !!}
+                                                {!! Form::text('fee_exchange_rate_snapshot', 1, ['class' => 'form-control fee_exchange_rate_snapshot', 'placeholder' => 'Rate', 'inputmode' => 'decimal', 'pattern' => '[0-9.]*']) !!}
                                             </div>
 
                                             {{-- Equivalent MMK (calculated display) + Hidden amount fields --}}
