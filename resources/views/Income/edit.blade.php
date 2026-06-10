@@ -366,18 +366,17 @@
     }
     </script>
 
-    @php
-        $editUsdRate = getDefaultExchangeRate('USD');
-        $editCnyRate = getDefaultExchangeRate('CNY');
-    @endphp
     <script>
         // === Multi-Currency Logic (Compulsory Fees) ===
         (function() {
-            var defaultExchangeRates = {
-                'MMK': 1,
-                'CNY': {{ $editCnyRate }},
-                'USD': {{ $editUsdRate }}
-            };
+            // 使用全局 window.currencyConfig 汇率（footer_js.blade.php 已提供），与全站统一
+            function getDefaultRates() {
+                if (window.currencyConfig && window.currencyConfig.rates) {
+                    return window.currencyConfig.rates;
+                }
+                // Fallback（极端情况下 window.currencyConfig 未加载）
+                return { 'MMK': 1, 'CNY': 500, 'USD': 3500 };
+            }
 
             // Calculate equivalent MMK for a given row
             function calcRowMMK($row) {
@@ -390,17 +389,21 @@
                 $row.find('.amount').val(mmkValue);
             }
 
-            // Initialize all rows after setList populates
+            // Initialize a single row's currency/rate logic
+            function initSingleRow($row) {
+                var currency = $row.find('.fee_currency').val() || 'MMK';
+                if (currency === 'MMK') {
+                    $row.find('.fee_exchange_rate_snapshot').val(1).prop('readonly', true);
+                } else {
+                    $row.find('.fee_exchange_rate_snapshot').prop('readonly', false);
+                }
+                calcRowMMK($row);
+            }
+
+            // Initialize all rows after setList populates the DOM
             window.initCompulsoryFeeRows = function() {
                 $('.compulsory-fee-row').each(function() {
-                    var $row = $(this);
-                    var currency = $row.find('.fee_currency').val() || 'MMK';
-                    if (currency === 'MMK') {
-                        $row.find('.fee_exchange_rate_snapshot').val(1).prop('readonly', true);
-                    } else {
-                        $row.find('.fee_exchange_rate_snapshot').prop('readonly', false);
-                    }
-                    calcRowMMK($row);
+                    initSingleRow($(this));
                 });
             };
 
@@ -408,11 +411,12 @@
             $(document).on('change', '.compulsory-fee-row .fee_currency', function() {
                 var $row = $(this).closest('.compulsory-fee-row');
                 var currency = $(this).val();
+                var rates = getDefaultRates();
 
                 if (currency === 'MMK') {
                     $row.find('.fee_exchange_rate_snapshot').val(1).prop('readonly', true);
                 } else {
-                    $row.find('.fee_exchange_rate_snapshot').val(defaultExchangeRates[currency] || 1).prop('readonly', false);
+                    $row.find('.fee_exchange_rate_snapshot').val(rates[currency] || 1).prop('readonly', false);
                 }
                 calcRowMMK($row);
             });
@@ -434,13 +438,41 @@
 
             if (typeof compulsoryFeesTypeRepeater !== 'undefined') {
                 compulsoryFeesTypeRepeater.setList(feesData.compulsory_fees);
-                // Initialize multi-currency calculations after setList populates DOM
-                setTimeout(function() {
-                    if (typeof initCompulsoryFeeRows === 'function') {
-                        initCompulsoryFeeRows();
+                // 轮询初始化多币种字段（setList 异步渲染 DOM，需要等待）
+                var retryCount = 0;
+                var maxRetries = 10;
+                var retryInterval = setInterval(function() {
+                    retryCount++;
+                    var rows = $('.compulsory-fee-row');
+                    if (rows.length > 0 && rows.first().find('.fee_currency').length > 0) {
+                        clearInterval(retryInterval);
+                        if (typeof initCompulsoryFeeRows === 'function') {
+                            initCompulsoryFeeRows();
+                        }
+                    } else if (retryCount >= maxRetries) {
+                        clearInterval(retryInterval);
                     }
-                }, 50);
+                }, 100);
             }
+
+            // 监听 "Add New Data" 按钮新增行：也初始化多币种字段
+            $('.compulsory-fees-types [data-repeater-create]').on('click', function() {
+                setTimeout(function() {
+                    var $newRows = $('.compulsory-fee-row');
+                    if ($newRows.length > 0) {
+                        // 只初始化最后一行（新添加的）
+                        var $lastRow = $newRows.last();
+                        if ($lastRow.find('.fee_currency').length > 0 && 
+                            $lastRow.find('.equivalent_mmk').val() === '') {
+                            var $row = $lastRow;
+                            var currency = $row.find('.fee_currency').val() || 'MMK';
+                            if (currency === 'MMK') {
+                                $row.find('.fee_exchange_rate_snapshot').val(1).prop('readonly', true);
+                            }
+                        }
+                    }
+                }, 150);
+            });
 
             if (typeof optionalFeesTypeRepeater !== 'undefined') {
                 optionalFeesTypeRepeater.setList(feesData.optional_fees);
