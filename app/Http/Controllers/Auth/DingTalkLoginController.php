@@ -326,6 +326,11 @@ class DingTalkLoginController extends Controller
                 ->with('error', 'School session expired. Please re-enter with a valid school_code.');
         }
 
+        Log::info('DingTalk bind started', [
+            'open_id_masked' => substr($pendingOpenId, 0, 6) . '****',
+            'school_code'    => $schoolCode,
+        ]);
+
         // 1. 根据已验证的 school_id 在主库查找学校
         $school = School::on('mysql')->where('id', $schoolId)->first();
 
@@ -386,8 +391,8 @@ class DingTalkLoginController extends Controller
                     ->with('error', 'This eSchool account is already bound to another DingTalk account.');
             }
 
-            // 6. 保存绑定记录到主库
-            DingTalkBinding::create([
+            // 6. 保存绑定记录到主库（显式指定 mysql 连接，防御性编程）
+            DingTalkBinding::on('mysql')->create([
                 'dingtalk_open_id'  => $pendingOpenId,
                 'dingtalk_union_id' => $pendingUnionId,
                 'school_id'         => $school->id,
@@ -398,12 +403,29 @@ class DingTalkLoginController extends Controller
             ]);
 
             Log::info('DingTalk binding created', [
-                'school_code' => $school->code,
-                'school_id'   => $school->id,
-                'user_id'     => $user->id,
+                'school_code'    => $school->code,
+                'school_id'      => $school->id,
+                'user_id'        => $user->id,
+                'open_id_masked' => substr($pendingOpenId, 0, 6) . '****',
             ]);
 
-            // 清除所有 DingTalk session
+            // 7. 设置 session（参考 autoLogin 模式，与 LoginController 顺序一致）
+            session(['db_connection_name' => 'school']);
+            session(['user_id'             => $user->id]);
+            session(['user_email'          => $user->email]);
+            session(['school_id'           => $school->id]);
+            session(['school_code'         => $school->code]);
+            Session::put('school_database_name', $school->database_name);
+
+            session()->save();
+
+            // 8. Laravel Auth 登录
+            Auth::login($user);
+
+            // 9. 防止 session fixation
+            $request->session()->regenerate();
+
+            // 10. 清除所有 DingTalk session
             session()->forget([
                 'dingtalk_pending_open_id',
                 'dingtalk_pending_union_id',
@@ -413,13 +435,24 @@ class DingTalkLoginController extends Controller
                 'dingtalk_school_database_name',
             ]);
 
-            return response('DingTalk binding created successfully.');
+            Log::info('DingTalk bind and auto-login successful', [
+                'school_code'    => $school->code,
+                'school_id'      => $school->id,
+                'user_id'        => $user->id,
+                'open_id_masked' => substr($pendingOpenId, 0, 6) . '****',
+            ]);
+
+            // 11. 跳转 dashboard
+            return redirect('/dashboard')->with('success', __('DingTalk binding created successfully.'));
 
         } catch (\Throwable $e) {
             Log::error('DingTalk bind exception', [
-                'stage'   => 'bind',
-                'class'   => get_class($e),
-                'code'    => $e->getCode(),
+                'stage'          => 'bind',
+                'class'          => get_class($e),
+                'code'           => $e->getCode(),
+                'message'        => $e->getMessage(),
+                'school_code'    => $schoolCode ?? 'unknown',
+                'open_id_masked' => $pendingOpenId ? substr($pendingOpenId, 0, 6) . '****' : 'missing',
             ]);
             return redirect()->route('dingtalk.bind')
                 ->with('error', 'Binding failed. Please try again later.');
