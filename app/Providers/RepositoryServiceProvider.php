@@ -110,6 +110,8 @@ use App\Repositories\StudentSubject\StudentSubjectRepository;
 use App\Repositories\SubjectTeacher\SubjectTeacherRepository;
 use App\Repositories\ExpenseCategory\ExpenseCategoryInterface;
 use App\Repositories\ExtraFormField\ExtraFormFieldsRepository;
+use App\Repositories\FinanceCategory\FinanceCategoryInterface;
+use App\Repositories\FinanceCategory\FinanceCategoryRepository;
 use App\Repositories\FeesInstallment\FeesInstallmentRepository;
 use App\Repositories\ExpenseCategory\ExpenseCategoryRepository;
 use App\Repositories\SubscriptionBill\SubscriptionBillInterface;
@@ -317,6 +319,7 @@ class RepositoryServiceProvider extends ServiceProvider {
         $this->app->bind(VehicleRepositoryInterface::class, VehicleRepository::class);
         $this->app->bind(PickupPointRepositoryInterface::class, PickupPointRepository::class);
         $this->app->bind(RouteVehicleRepositoryInterface::class, RouteVehicleRepository::class);
+        $this->app->bind(FinanceCategoryInterface::class, FinanceCategoryRepository::class);
     }
 
     /**

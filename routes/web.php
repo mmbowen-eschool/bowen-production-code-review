@@ -20,6 +20,7 @@ use App\Http\Controllers\Exam\GradeController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FaqController;
+use App\Http\Controllers\FinanceCategoryController;
 use App\Http\Controllers\FeesController;
 use App\Http\Controllers\FeesTypeController;
 use App\Http\Controllers\FormFieldsController;
@@ -815,6 +816,10 @@ Route::group(['middleware' => ['Role', 'checkSchoolStatus', 'status', 'SwitchDat
         // Expense
         Route::get('expense/filter/{session_year_id?}', [ExpenseController::class, 'filter_graph']);
         Route::resource('expense', ExpenseController::class);
+
+        // Finance Category
+        Route::get('finance-category/list', [FinanceCategoryController::class, 'list'])->name('finance-category.list');
+        Route::resource('finance-category', FinanceCategoryController::class)->except(['show']);
         // Payroll
         Route::get('payroll/slip/{id?}', [PayrollController::class, 'slip'])->name('payroll.slip');
         Route::get('payroll/slips', [PayrollController::class, 'slip_index'])->name('payroll.slip.index');

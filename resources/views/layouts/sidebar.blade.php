@@ -905,6 +905,15 @@
                         @canany(['expense-category-create', 'expense-category-list', 'expense-category-edit',
                             'expense-category-delete'])
                             <li class="nav-item">
+                                <a href="{{ route('finance-category.index') }}" class="nav-link"
+                                    data-name="{{ Auth::user()->getRoleNames()[0] }}"
+                                    data-access="@hasFeatureAccess('Expense Management')">{{ __('Finance Categories') }} </a>
+                            </li>
+                        @endcanany
+
+                        @canany(['expense-category-create', 'expense-category-list', 'expense-category-edit',
+                            'expense-category-delete'])
+                            <li class="nav-item">
                                 <a href="{{ route('expense-category.index') }}" class="nav-link"
                                     data-name="{{ Auth::user()->getRoleNames()[0] }}"
                                     data-access="@hasFeatureAccess('Expense Management')">{{ __('manage_category') }} </a>
