@@ -20,10 +20,6 @@
                             Enter your eSchool teacher credentials to bind your DingTalk account.
                         </p>
 
-                        <p>
-                            School code: <strong>{{ $schoolCodeInSession ? 'YES' : 'NO' }}</strong>
-                        </p>
-
                         @if (session('error'))
                             <div class="alert alert-danger">
                                 {{ session('error') }}
@@ -32,6 +28,17 @@
 
                         <form method="POST" action="{{ route('dingtalk.bind.submit') }}">
                             @csrf
+
+                            <div class="mb-3">
+                                <label for="school_code" class="form-label">School Code</label>
+                                <input id="school_code" type="text"
+                                    class="form-control @error('school_code') is-invalid @enderror"
+                                    name="school_code" value="{{ old('school_code', $schoolCodeInSession) }}" required
+                                    placeholder="Enter your school code">
+                                @error('school_code')
+                                    <span class="invalid-feedback">{{ $message }}</span>
+                                @enderror
+                            </div>
 
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email or Mobile</label>
