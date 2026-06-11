@@ -1456,6 +1456,14 @@
                             </li>
                         @endcan
 
+                        {{-- DingTalk Binding Management --}}
+                        @hasanyrole(['Super Admin', 'School Admin'])
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                    href="{{ route('dingtalk.bindings.index') }}">{{ __('DingTalk Binding Management') }}</a>
+                            </li>
+                        @endhasanyrole
+
                     </ul>
                 </div>
             </li>

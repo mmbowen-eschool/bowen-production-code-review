@@ -352,6 +352,11 @@ Route::group(['middleware' => ['Role', 'checkSchoolStatus', 'status', 'SwitchDat
 
         Route::resource('guidances', GuidanceController::class);
 
+        // DingTalk Binding Management
+        Route::get('dingtalk/bindings', [\App\Http\Controllers\DingTalkBindingController::class, 'index'])->name('dingtalk.bindings.index');
+        Route::get('dingtalk/bindings/list', [\App\Http\Controllers\DingTalkBindingController::class, 'list'])->name('dingtalk.bindings.list');
+        Route::delete('dingtalk/bindings/{id}', [\App\Http\Controllers\DingTalkBindingController::class, 'destroy'])->name('dingtalk.bindings.destroy');
+
         // End super admin routes
         // =================================================================
 

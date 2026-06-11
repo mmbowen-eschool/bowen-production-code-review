@@ -25,4 +25,26 @@ class DingTalkBinding extends Model
         'dingtalk_nick',
         'last_login_at',
     ];
+
+    /**
+     * 绑定所属学校（schools 表在主库）。
+     */
+    public function school()
+    {
+        return $this->belongsTo(School::class, 'school_id');
+    }
+
+    /**
+     * 遮罩 openId / unionId，只显示前 6 位 + **** + 后 4 位。
+     */
+    public static function maskOpenId(?string $value): string
+    {
+        if (empty($value)) {
+            return '';
+        }
+        if (mb_strlen($value) <= 10) {
+            return mb_substr($value, 0, 3) . '****' . mb_substr($value, -3);
+        }
+        return mb_substr($value, 0, 6) . '****' . mb_substr($value, -4);
+    }
 }
