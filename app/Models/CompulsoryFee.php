@@ -67,16 +67,25 @@ class CompulsoryFee extends Model
         return $this->hasMany(FeesAdvance::class);
     }
 
+    protected static $modeMap = [
+        '1' => 'Cash',
+        '2' => 'Cheque',
+        '3' => 'Online',
+        'Cash' => 'Cash',
+        'Cheque' => 'Cheque',
+        'Online' => 'Online',
+        'KBZ Pay' => 'KBZ Pay',
+        'Quick Pay' => 'Quick Pay',
+        'KBZ Bank' => 'KBZ Bank',
+        'AYA Bank' => 'AYA Bank',
+        'YOMA BANK' => 'YOMA BANK',
+        'CB Bank' => 'CB Bank',
+        'Wechat Pay' => 'Wechat Pay',
+        'Ali Pay' => 'Ali Pay',
+    ];
+
     public function getModeNameAttribute(){
-        if ($this->mode == 1) {
-            return 'Cash';
-        }
-
-        if($this->mode == 2) {
-            return 'Cheque';
-        }
-
-        return 'Online';
+        return self::$modeMap[$this->mode] ?? $this->mode;
     }
 
     /**

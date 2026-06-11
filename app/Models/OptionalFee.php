@@ -61,14 +61,25 @@ class OptionalFee extends Model
         return $this->belongsTo(FeesClassType::class, 'fees_class_id');
     }
 
+    protected static $modeMap = [
+        '1' => 'Cash',
+        '2' => 'Cheque',
+        '3' => 'Online',
+        'Cash' => 'Cash',
+        'Cheque' => 'Cheque',
+        'Online' => 'Online',
+        'KBZ Pay' => 'KBZ Pay',
+        'Quick Pay' => 'Quick Pay',
+        'KBZ Bank' => 'KBZ Bank',
+        'AYA Bank' => 'AYA Bank',
+        'YOMA BANK' => 'YOMA BANK',
+        'CB Bank' => 'CB Bank',
+        'Wechat Pay' => 'Wechat Pay',
+        'Ali Pay' => 'Ali Pay',
+    ];
+
     public function getModeNameAttribute(){
-        if($this->mode == "1"){
-            return 'Cash';
-        }elseif($this->mode == "2"){
-            return 'Cheque';
-        }else{
-            return 'Online';
-        }
+        return self::$modeMap[$this->mode] ?? $this->mode;
     }
 
     public function getCreatedAtAttribute()

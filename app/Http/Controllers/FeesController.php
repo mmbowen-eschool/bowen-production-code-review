@@ -1182,7 +1182,7 @@ class FeesController extends Controller
                     $tempRow['paid_amount'] = 0;
                 }
                 if ($row->fees_paid && isset($row->fees_paid->compulsory_fee[0]->mode)) {
-                    $tempRow['payment_method'] = $row->fees_paid->compulsory_fee[0]->mode;
+                    $tempRow['payment_method'] = $row->fees_paid->compulsory_fee[0]->mode_name;
                 }
 
                 $tempRow['operate'] = $operate;
@@ -1446,13 +1446,13 @@ class FeesController extends Controller
                             'type' => 'Installment Payment',
                             'installment_id' => $installment_fee['id'],
                             'mode' => $request->mode,
-                            'cheque_no' => $request->mode == 2 ? $request->cheque_no : null,
-                            'amount' => (float) $installment_fee['amount'], // 保存 MMK 金额
-                            'due_charges' => $installment_fee['due_charges'] ?? null,
-                            'fees_paid_id' => $feesPaidResult->id,
-                            'date' => date('Y-m-d', strtotime($request->date))
-                        );
-                        $this->compulsoryFee->create($compulsoryFeeData);
+                    'cheque_no' => ($request->mode == 2 || $request->mode == '2' || $request->mode == 'Cheque') ? $request->cheque_no : null,
+                        'amount' => (float) $installment_fee['amount'], // 保存 MMK 金额
+                        'due_charges' => $installment_fee['due_charges'] ?? null,
+                        'fees_paid_id' => $feesPaidResult->id,
+                        'date' => date('Y-m-d', strtotime($request->date))
+                    );
+                    $this->compulsoryFee->create($compulsoryFeeData);
 
                         $sessionYear = $this->cache->getDefaultSessionYear();
                         $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\CompulsoryFee', $feesPaidResult->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
@@ -1463,7 +1463,7 @@ class FeesController extends Controller
                     'type' => 'Full Payment',
                     'student_id' => $request->student_id,
                     'mode' => $request->mode,
-                    'cheque_no' => $request->mode == 2 ? $request->cheque_no : null,
+                    'cheque_no' => ($request->mode == 2 || $request->mode == '2' || $request->mode == 'Cheque') ? $request->cheque_no : null,
                     'amount' => $compulsoryFeeAmount, // compulsory_fees.amount 保存 MMK 金额
                     'due_charges' => $request->due_charges_amount ?? null,
                     'fees_paid_id' => $feesPaidResult->id,
@@ -1626,7 +1626,7 @@ class FeesController extends Controller
                             'class_id' => $request->class_id,
                             'fees_class_id' => $feesClassType['id'],
                             'mode' => $request->mode,
-                            'cheque_no' => $request->mode == 2 ? $request->cheque_no : null,
+                            'cheque_no' => ($request->mode == 2 || $request->mode == '2' || $request->mode == 'Cheque') ? $request->cheque_no : null,
                             'amount' => $feesClassType['amount'],
                             'fees_paid_id' => $feesPaidResult->id,
                             'date' => date('Y-m-d', strtotime($request->date)),
@@ -1766,7 +1766,7 @@ class FeesController extends Controller
                 }
 
                 if ($row->fees_paid && !empty($row->optional_fees[0]->mode)) {
-                    $tempRow['payment_method'] = $row->optional_fees[0]->mode;
+                    $tempRow['payment_method'] = $row->optional_fees[0]->mode_name;
                 }
 
                 // 多币种 & 日期 — 从 optional_fees[0]->fees_paid_id 获取正确的付款记录

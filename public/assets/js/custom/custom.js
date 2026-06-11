@@ -904,7 +904,8 @@ $('#verify_email').on('submit', function (e) {
 // });
 $('.mode').on('change', function (e) {
     e.preventDefault();
-    if ($(this).val() == 2) {
+    var modeVal = $(this).val();
+    if (modeVal == 2 || modeVal == '2' || modeVal == 'Cheque') {
         $('.cheque-no-container').show(200);
     } else {
         $('.cheque-no-container').hide(200);

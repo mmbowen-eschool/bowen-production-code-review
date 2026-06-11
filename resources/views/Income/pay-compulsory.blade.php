@@ -270,55 +270,61 @@
                                         <div class="d-flex flex-wrap">
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="cash-compulsory-mode mode" value="1" checked>
+                                                    <input type="radio" name="mode" class="cash-compulsory-mode mode" value="Cash" checked>
                                                     {{ __('cash') }}
                                                 </label>
                                             </div>
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="mode" value="2">
+                                                    <input type="radio" name="mode" class="cheque-compulsory-mode mode" value="Cheque">
+                                                    {{ __('cheque') }}
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <label class="form-check-label">
+                                                    <input type="radio" name="mode" class="mode" value="KBZ Pay">
                                                     KBZ Pay
                                                 </label>
                                             </div>
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="mode" value="3">
+                                                    <input type="radio" name="mode" class="mode" value="Quick Pay">
                                                     Quick Pay
                                                 </label>
                                             </div>
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="mode" value="4">
+                                                    <input type="radio" name="mode" class="mode" value="KBZ Bank">
                                                     KBZ Bank
                                                 </label>
                                             </div>
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="mode" value="5">
+                                                    <input type="radio" name="mode" class="mode" value="AYA Bank">
                                                     AYA Bank
                                                 </label>
                                             </div>
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="mode" value="6">
+                                                    <input type="radio" name="mode" class="mode" value="YOMA BANK">
                                                     YOMA BANK
                                                 </label>
                                             </div>
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="mode" value="7">
+                                                    <input type="radio" name="mode" class="mode" value="CB Bank">
                                                     CB Bank
                                                 </label>
                                             </div>
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="mode" value="8">
+                                                    <input type="radio" name="mode" class="mode" value="Wechat Pay">
                                                     Wechat Pay
                                                 </label>
                                             </div>
                                             <div class="form-check form-check-inline">
                                                 <label class="form-check-label">
-                                                    <input type="radio" name="mode" class="mode" value="9">
+                                                    <input type="radio" name="mode" class="mode" value="Ali Pay">
                                                     Ali Pay
                                                 </label>
                                             </div>
