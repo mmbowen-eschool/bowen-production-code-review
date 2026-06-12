@@ -8,15 +8,15 @@ use App\Models\OptionalFee;
 use App\Models\Students;
 use App\Services\CachingService;
 use App\Services\ResponseService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class StudentLedgerController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
         ResponseService::noPermissionThenRedirect('fees-paid');
 
+        $request = request();
         $students = collect();
         $search   = $request->get('search');
 
