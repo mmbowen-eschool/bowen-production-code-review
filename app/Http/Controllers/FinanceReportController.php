@@ -12,7 +12,6 @@ use App\Models\SessionYear;
 use App\Models\Students;
 use App\Services\CachingService;
 use App\Services\ResponseService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class FinanceReportController extends Controller
@@ -29,8 +28,10 @@ class FinanceReportController extends Controller
      * finance_category_id, use it; otherwise group under
      * "Compulsory Fees" or "Uncategorized".
      */
-    public function index(Request $request)
+    public function index()
     {
+        $request = request();
+
         ResponseService::noPermissionThenRedirect('fees-paid');
 
         $schoolId = Auth::user()->school_id;
