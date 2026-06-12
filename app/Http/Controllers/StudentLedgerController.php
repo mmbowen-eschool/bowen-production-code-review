@@ -21,14 +21,23 @@ class StudentLedgerController extends Controller
         $search   = $request->get('search');
 
         if ($search) {
+            // Normalize: remove all spaces for space-insensitive matching
+            // e.g. "BowenSchool" → finds "Bowen School", "StudentOne" → finds "Student One"
+            $normalizedSearch = preg_replace('/\s+/u', '', $search);
+
             $students = Students::with(['user', 'class_section.class', 'class_section.section', 'guardian'])
                 ->where('school_id', Auth::user()->school_id)
-                ->where(function ($q) use ($search) {
+                ->where(function ($q) use ($search, $normalizedSearch) {
                     $q->where('admission_no', 'like', "%{$search}%")
-                      ->orWhereHas('user', function ($uq) use ($search) {
+                      ->orWhereRaw("REPLACE(admission_no, ' ', '') LIKE ?", ["%{$normalizedSearch}%"])
+                      ->orWhereHas('user', function ($uq) use ($search, $normalizedSearch) {
                           $uq->where('first_name', 'like', "%{$search}%")
                              ->orWhere('last_name', 'like', "%{$search}%")
-                             ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+                             ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"])
+                             ->orWhereRaw(
+                                 "REPLACE(CONCAT(COALESCE(first_name, ''), COALESCE(last_name, '')), ' ', '') LIKE ?",
+                                 ["%{$normalizedSearch}%"]
+                             );
                       });
                 })
                 ->limit(50)
