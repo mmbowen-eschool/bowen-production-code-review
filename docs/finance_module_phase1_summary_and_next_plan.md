@@ -29,7 +29,7 @@
 - 快捷入口（Quick Links）
 - 支持按日期范围筛选：`?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
-**关键修复（P2-3）：** Dashboard 和 Finance Report 的收入日期口径已统一，均按实际收款日期（`compulsory_fees.date` / `optional_fees.date`）统计。
+**关键修复（P2-3）：** Dashboard 和 Finance Report 的收入日期口径已统一，均按实际付款记录日期统计。
 
 **相关 Commit：** `7a08eed` Add finance dashboard  
 **修复 Commit：** `5a7725c` Fix finance module P2 issues
@@ -306,7 +306,7 @@
 ### 5.4 Payroll / Transportation Expense 仍在独立模块
 
 - **现状：** Payroll 和 Transportation Expense 没有合并进 Finance
-- **说明：** 这些模块有独立的费用记录，不在 Finance Report 统计范围内
+- **说明：** Payroll 和 Transportation Expense 目前仍在独立模块中管理，是否完整纳入 Finance Report 统计范围，需要后续根据真实数据和表结构进一步确认
 - **建议：** 后续评估是否纳入统一 Finance Report（Phase 5）
 
 ---
