@@ -6,6 +6,7 @@ use App\Models\CompulsoryFee;
 use App\Models\Fee;
 use App\Models\OptionalFee;
 use App\Models\Students;
+use App\Models\School;
 use App\Services\CachingService;
 use App\Services\ResponseService;
 use Illuminate\Support\Facades\Auth;
@@ -62,6 +63,41 @@ class StudentLedgerController extends Controller
     {
         ResponseService::noPermissionThenRedirect('fees-paid');
 
+        $data = $this->buildStudentLedgerData($userId);
+
+        if ($data === null) {
+            abort(404);
+        }
+
+        return view('student-ledger.show', $data);
+    }
+
+    /**
+     * Print / Statement view for a single student ledger.
+     */
+    public function print($userId)
+    {
+        ResponseService::noPermissionThenRedirect('fees-paid');
+
+        $data = $this->buildStudentLedgerData($userId);
+
+        if ($data === null) {
+            abort(404);
+        }
+
+        $school = School::findOrFail(Auth::user()->school_id);
+        $data['school'] = $school;
+
+        return view('student-ledger.print', $data);
+    }
+
+    /**
+     * Build all student ledger data for a given userId.
+     *
+     * Returns an array with all view variables, or null if student not found.
+     */
+    private function buildStudentLedgerData($userId): ?array
+    {
         // ---- Student Info ----
         $student = Students::with(['user', 'class_section.class', 'class_section.section', 'guardian'])
             ->where('user_id', $userId)
@@ -69,7 +105,7 @@ class StudentLedgerController extends Controller
             ->first();
 
         if (!$student) {
-            abort(404);
+            return null;
         }
 
         // Resolve class_id via class_section (priority), fallback to direct class_id
@@ -80,7 +116,7 @@ class StudentLedgerController extends Controller
 
         // Early return when missing session year or class_id
         if (!$sessionYear || !$classId) {
-            return view('student-ledger.show', [
+            return [
                 'student'                   => $student,
                 'fees'                      => collect(),
                 'hasFeeStructure'           => false,
@@ -94,7 +130,7 @@ class StudentLedgerController extends Controller
                 'totalPaid'                 => 0,
                 'lastPaymentDate'           => '',
                 'paymentHistory'            => collect(),
-            ]);
+            ];
         }
 
         $sessionYearId = $sessionYear->id;
@@ -206,12 +242,12 @@ class StudentLedgerController extends Controller
 
         $paymentHistory = $paymentHistory->sortByDesc('date');
 
-        return view('student-ledger.show', compact(
+        return compact(
             'student', 'fees', 'hasFeeStructure', 'sessionYear',
             'compulsoryExpected', 'totalCompulsoryExpected',
             'totalCompulsoryPaid', 'totalCompulsoryOutstanding',
             'optionalPaidRecords', 'totalOptionalPaid', 'totalPaid',
             'lastPaymentDate', 'paymentHistory'
-        ));
+        );
     }
 }

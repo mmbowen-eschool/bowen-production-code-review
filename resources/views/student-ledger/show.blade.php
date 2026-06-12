@@ -54,9 +54,12 @@
                                 {{ $student->guardian->mobile ?? $student->user->mobile ?? __('暂无联系方式') }}
                             </div>
                         </div>
-                        <div class="mt-2">
+                        <div class="mt-2 d-flex justify-content-between align-items-center">
                             <a href="{{ route('student-ledger.index') }}" class="btn btn-sm btn-secondary">
                                 &larr; {{ __('Back to Search') }}
+                            </a>
+                            <a href="{{ route('student-ledger.print', $student->user_id) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="fa fa-print"></i> {{ __('Print Statement') }}
                             </a>
                         </div>
                     </div>

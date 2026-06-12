@@ -827,6 +827,7 @@ Route::group(['middleware' => ['Role', 'checkSchoolStatus', 'status', 'SwitchDat
         // Student Ledger
         Route::get('student-ledger', [StudentLedgerController::class, 'index'])->name('student-ledger.index');
         Route::get('student-ledger/{userId}', [StudentLedgerController::class, 'show'])->name('student-ledger.show');
+        Route::get('student-ledger/{userId}/print', [StudentLedgerController::class, 'print'])->name('student-ledger.print');
 
         // Outstanding Fees
         Route::get('outstanding-fees', [OutstandingFeesController::class, 'index'])->name('outstanding-fees.index');
