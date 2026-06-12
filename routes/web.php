@@ -833,6 +833,7 @@ Route::group(['middleware' => ['Role', 'checkSchoolStatus', 'status', 'SwitchDat
 
         // Finance Report
         Route::get('finance-report', [FinanceReportController::class, 'index'])->name('finance-report.index');
+        Route::get('finance-report/export', [FinanceReportController::class, 'export'])->name('finance-report.export');
 
         // Payroll
         Route::get('payroll/slip/{id?}', [PayrollController::class, 'slip'])->name('payroll.slip');

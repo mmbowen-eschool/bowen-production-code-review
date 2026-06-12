@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\FinanceReportExport;
 use App\Models\CompulsoryFee;
 use App\Models\Expense;
 use App\Models\Fee;
 use App\Models\FeesClassType;
 use App\Models\FinanceCategory;
 use App\Models\OptionalFee;
+use App\Models\School;
 use App\Models\SessionYear;
 use App\Models\Students;
 use App\Services\CachingService;
 use App\Services\ResponseService;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 
 class FinanceReportController extends Controller
 {
@@ -30,21 +33,63 @@ class FinanceReportController extends Controller
      */
     public function index()
     {
-        $request = request();
-
         ResponseService::noPermissionThenRedirect('fees-paid');
 
-        $schoolId = Auth::user()->school_id;
-        $cache    = app(CachingService::class);
+        $request = request();
 
-        // ---- Default date range: current month ----
-        $from = $request->get('from', now()->startOfMonth()->toDateString());
-        $to   = $request->get('to', now()->toDateString());
-        $typeFilter     = $request->get('type', 'all');        // all | income | expense
-        $categoryFilter = $request->get('finance_category_id'); // null = all
+        $from          = $request->get('from', now()->startOfMonth()->toDateString());
+        $to            = $request->get('to', now()->toDateString());
+        $typeFilter    = $request->get('type', 'all');
+        $categoryFilter = $request->get('finance_category_id');
 
-        // ---- Finance Categories for filter dropdown ----
         $financeCategories = FinanceCategory::orderBy('sort_order')->orderBy('name')->get();
+
+        $data = $this->buildReportData($from, $to, $typeFilter, $categoryFilter);
+
+        $hasFilter = ($typeFilter !== 'all') || ($categoryFilter !== null);
+
+        return view('finance-report.index', array_merge($data, compact(
+            'from', 'to', 'typeFilter', 'categoryFilter',
+            'financeCategories', 'hasFilter',
+        )));
+    }
+
+    /**
+     * Export the finance report as Excel (.xlsx).
+     */
+    public function export()
+    {
+        ResponseService::noPermissionThenRedirect('fees-paid');
+
+        $request = request();
+
+        $from          = $request->get('from', now()->startOfMonth()->toDateString());
+        $to            = $request->get('to', now()->toDateString());
+        $typeFilter    = $request->get('type', 'all');
+        $categoryFilter = $request->get('finance_category_id');
+
+        $school = School::findOrFail(Auth::user()->school_id);
+
+        $data = $this->buildReportData($from, $to, $typeFilter, $categoryFilter);
+
+        $filename = 'finance_report_' . $from . '_' . $to . '.xlsx';
+
+        return Excel::download(
+            new FinanceReportExport($data, $school->name, $from, $to, $typeFilter, $categoryFilter),
+            $filename
+        );
+    }
+
+    /**
+     * Build all report data arrays from raw queries.
+     *
+     * Returns:
+     *   categoryRows, totalIncome, totalExpense, netIncome,
+     *   totalCompulsoryIncome, totalOptionalIncome, currentOutstanding
+     */
+    private function buildReportData(string $from, string $to, string $typeFilter, ?string $categoryFilter): array
+    {
+        $schoolId = Auth::user()->school_id;
 
         // ---- 1. Build safe fees_id → category map (compulsory) ----
         $feeIdCategoryMap = $this->buildCompulsoryCategoryMap();
@@ -210,10 +255,7 @@ class FinanceReportController extends Controller
             return $row;
         });
 
-        // ---- 10. Detect if filters are active (for view indicator) ----
-        $hasFilter = ($typeFilter !== 'all') || ($categoryFilter !== null);
-
-        return view('finance-report.index', compact(
+        return compact(
             'categoryRows',
             'totalIncome',
             'totalExpense',
@@ -221,13 +263,7 @@ class FinanceReportController extends Controller
             'totalCompulsoryIncome',
             'totalOptionalIncome',
             'currentOutstanding',
-            'from',
-            'to',
-            'typeFilter',
-            'categoryFilter',
-            'financeCategories',
-            'hasFilter',
-        ));
+        );
     }
 
     /**

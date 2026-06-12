@@ -53,6 +53,9 @@
                                     <div>
                                         <button type="submit" class="btn btn-theme">{{ __('Apply') }}</button>
                                         <a href="{{ route('finance-report.index') }}" class="btn btn-secondary ml-2">{{ __('Clear') }}</a>
+                                        <a href="{{ route('finance-report.export', request()->query()) }}" class="btn btn-success ml-2">
+                                            <i class="fa fa-download"></i> {{ __('Export') }}
+                                        </a>
                                     </div>
                                 </div>
                             </div>
