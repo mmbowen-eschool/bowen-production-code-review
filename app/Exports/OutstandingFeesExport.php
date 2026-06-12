@@ -37,7 +37,10 @@ class OutstandingFeesExport implements FromArray, WithHeadings, ShouldAutoSize, 
         $classSectionFilter = $this->filters['classSectionFilter'] ?? '';
         $statusFilter       = $this->filters['statusFilter'] ?? '';
         $outstandingOnly    = $this->filters['outstandingOnly'] ?? false;
-        $filterSessionYearId = $this->filters['filterSessionYearId'] ?? '';
+
+        // Session year name for display (P2-1: show name instead of ID)
+        $filterSessionYearName = $this->filters['filterSessionYearName'] ?? '';
+        $filterSessionYearId   = $this->filters['filterSessionYearId'] ?? '';
 
         // ── Section 1: Report Summary ──
         $rows[] = ['Outstanding Fees Report'];
@@ -45,7 +48,7 @@ class OutstandingFeesExport implements FromArray, WithHeadings, ShouldAutoSize, 
         $rows[] = ['Export Date', now()->toDateString()];
         $rows[] = ['Search Filter', $search ?: 'All'];
         $rows[] = ['Class Section Filter', $classSectionFilter ?: 'All'];
-        $rows[] = ['Session Year Filter', $filterSessionYearId ?: 'All'];
+        $rows[] = ['Session Year Filter', $filterSessionYearName ?: 'All'];
         $rows[] = ['Status Filter', $statusFilter ?: 'All'];
         $rows[] = ['Outstanding Only', $outstandingOnly ? 'Yes' : 'No'];
 
@@ -59,6 +62,21 @@ class OutstandingFeesExport implements FromArray, WithHeadings, ShouldAutoSize, 
         // ── Section 2: Outstanding Fees List ──
         $rows[] = [''];
         $rows[] = ['Outstanding Fees List'];
+        $rows[] = [
+            'Student Name',
+            'Admission No',
+            'Class',
+            'Section',
+            'Session Year',
+            'Contact',
+            'Expected Amount MMK',
+            'Compulsory Paid MMK',
+            'Optional Paid MMK',
+            'Outstanding Amount MMK',
+            'Status',
+            'Last Payment Date',
+            'User ID',
+        ];
 
         foreach ($this->resultRows as $row) {
             $rows[] = [
@@ -66,7 +84,7 @@ class OutstandingFeesExport implements FromArray, WithHeadings, ShouldAutoSize, 
                 $row['admission_no'],
                 $row['class_name'],
                 $row['section_name'],
-                $this->filters['filterSessionYearId'] ?? '',
+                $filterSessionYearName ?: $filterSessionYearId,
                 $row['contact'],
                 $row['compulsory_expected'],
                 $row['compulsory_paid'],
@@ -101,14 +119,19 @@ class OutstandingFeesExport implements FromArray, WithHeadings, ShouldAutoSize, 
                 // Bold title (row 1)
                 $sheet->getStyle('A1:A1')->getFont()->setBold(true)->setSize(13);
 
-                // Bold list section title
-                $listTitleRow = 17;
+                // Bold list section title (row 16 after adding column headers)
+                $listTitleRow = 16;
                 $sheet->getStyle("A{$listTitleRow}:A{$listTitleRow}")->getFont()->setBold(true)->setSize(13);
 
-                // Number format for amount columns
+                // Bold column header row
+                $headerRow = $listTitleRow + 1; // row 17
+                $sheet->getStyle("A{$headerRow}:M{$headerRow}")->getFont()->setBold(true);
+
+                // Number format for amount columns (data starts at row 18)
                 $highestRow = $sheet->getHighestRow();
-                if ($highestRow > $listTitleRow) {
-                    $sheet->getStyle("G{$listTitleRow}:J{$highestRow}")
+                $dataStartRow = $headerRow + 1; // row 18
+                if ($highestRow >= $dataStartRow) {
+                    $sheet->getStyle("G{$dataStartRow}:J{$highestRow}")
                         ->getNumberFormat()->setFormatCode('#,##0');
                 }
             },

@@ -40,24 +40,19 @@ class FinanceDashboardController extends Controller
         }
 
         // ── Income (date-filtered) ──
-        $compulsoryIncome = 0;
-        $optionalIncome   = 0;
-        if (!empty($allFeeIds)) {
-            $compulsoryIncome = CompulsoryFee::where('school_id', $schoolId)
-                ->where('status', 'Success')
-                ->whereBetween('date', [$from, $to])
-                ->whereHas('fees_paid', fn($q) => $q->whereIn('fees_id', $allFeeIds))
-                ->sum('amount');
+        // P2-3: Use pure date filter consistent with Finance Report.
+        // Previously cross-filtered by session year fee structure which caused
+        // income mismatch between Dashboard and Finance Report.
+        $compulsoryIncome = CompulsoryFee::where('school_id', $schoolId)
+            ->where('status', 'Success')
+            ->whereBetween('date', [$from, $to])
+            ->sum('amount');
 
-            $feesClassTypeIds = FeesClassType::whereIn('fees_id', $allFeeIds)->pluck('id')->toArray();
-            $optionalQuery = OptionalFee::where('school_id', $schoolId)
-                ->where('status', 'Success')
-                ->whereBetween('date', [$from, $to]);
-            if (!empty($feesClassTypeIds)) {
-                $optionalQuery->whereIn('fees_class_id', $feesClassTypeIds);
-            }
-            $optionalIncome = $optionalQuery->sum('amount');
-        }
+        $optionalIncome = OptionalFee::where('school_id', $schoolId)
+            ->where('status', 'Success')
+            ->whereBetween('date', [$from, $to])
+            ->sum('amount');
+
         $totalIncome = $compulsoryIncome + $optionalIncome;
 
         // ── Expense (date-filtered) ──
@@ -82,7 +77,7 @@ class FinanceDashboardController extends Controller
         $outstandingOverview = $this->computeOutstandingOverview($schoolId, $allFees, $allFeeIds);
 
         // ── Category Breakdown ──
-        $categoryBreakdown = $this->computeCategoryBreakdown($schoolId, $allFeeIds, $from, $to);
+        $categoryBreakdown = $this->computeCategoryBreakdown($schoolId, $from, $to);
 
         // ── Recent Payments ──
         $recentPayments = $this->getRecentPayments($schoolId, $allFeeIds, $from, $to);
@@ -218,33 +213,49 @@ class FinanceDashboardController extends Controller
 
     /**
      * Income/Expense category breakdown.
-     * Income uses fee structure categories (expected), expense uses actual expenses.
+     * Income uses actual payment data (pure date filter, P2-3: consistent with Finance Report).
+     * Expense uses actual expenses.
      */
-    private function computeCategoryBreakdown(int $schoolId, array $allFeeIds, string $from, string $to): array
+    private function computeCategoryBreakdown(int $schoolId, string $from, string $to): array
     {
-        // ── Income by Category (from fee structure, proportionally) ──
+        // ── Income by Category (from actual payments in date range, proportional attribution) ──
         $incomeByCat = [];
         $totalIncomeCat = 0;
 
-        if (!empty($allFeeIds)) {
-            // Get all fees_class_types for session year, grouped by fee_id for proportional attribution
-            $allFcts = FeesClassType::whereIn('fees_id', $allFeeIds)->with('finance_category')->get();
+        // Get compulsory payments in date range (no session year fee filter)
+        $compulsoryPayments = CompulsoryFee::where('school_id', $schoolId)
+            ->where('status', 'Success')
+            ->whereBetween('date', [$from, $to])
+            ->with('fees_paid')
+            ->get();
+
+        // Collect fee_ids from actual payments to load category mappings
+        $feeIdsFromPayments = $compulsoryPayments
+            ->pluck('fees_paid.fees_id')
+            ->unique()
+            ->filter()
+            ->values()
+            ->toArray();
+
+        if (!empty($feeIdsFromPayments)) {
+            // Load fees_class_types for fee_ids that appear in payments
+            $allFcts = FeesClassType::whereIn('fees_id', $feeIdsFromPayments)
+                ->with('finance_category')
+                ->get();
             $fctByFeeId = $allFcts->groupBy('fees_id');
 
-            // Sum compulsory income per fees_id
-            $compPerFee = CompulsoryFee::where('school_id', $schoolId)
-                ->where('status', 'Success')
-                ->whereBetween('date', [$from, $to])
-                ->whereHas('fees_paid', fn($q) => $q->whereIn('fees_id', $allFeeIds))
-                ->with('fees_paid')
-                ->get()
-                ->groupBy(fn($c) => $c->fees_paid->fees_id ?? 0);
+            $compPerFee = $compulsoryPayments->groupBy(fn($c) => $c->fees_paid->fees_id ?? 0);
 
             foreach ($compPerFee as $fid => $records) {
                 $sum    = $records->sum('amount');
                 $fcts   = $fctByFeeId->get($fid, collect());
                 $totalW = $fcts->sum(fn($f) => ($f->fee_amount_mmk > 0 ? $f->fee_amount_mmk : $f->amount));
-                if ($totalW <= 0) continue;
+                if ($totalW <= 0) {
+                    // No fee_class_type info → Uncategorized
+                    $incomeByCat['Uncategorized'] = ($incomeByCat['Uncategorized'] ?? 0) + $sum;
+                    $totalIncomeCat += $sum;
+                    continue;
+                }
                 foreach ($fcts as $fct) {
                     $cat = $fct->finance_category->name ?? 'Uncategorized';
                     $weight = ($fct->fee_amount_mmk > 0 ? $fct->fee_amount_mmk : $fct->amount);

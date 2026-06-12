@@ -101,9 +101,14 @@ class OutstandingFeesController extends Controller
 
         $school = School::findOrFail($schoolId);
 
+        // Resolve session year name for Excel display (P2-1)
+        $filterSessionYearName = $filterSessionYearId
+            ? SessionYear::owner()->where('id', $filterSessionYearId)->value('name')
+            : null;
+
         $filters = compact(
             'search', 'classSectionFilter', 'statusFilter',
-            'outstandingOnly', 'filterSessionYearId'
+            'outstandingOnly', 'filterSessionYearId', 'filterSessionYearName'
         );
 
         [$resultRows, $summary] = $this->buildOutstandingFeesData($schoolId, $filters);
