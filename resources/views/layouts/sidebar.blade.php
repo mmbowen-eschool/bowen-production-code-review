@@ -633,6 +633,13 @@
                         @endcan
                         @can('fees-paid')
                             <li class="nav-item">
+                                <a href="{{ route('finance-dashboard.index') }}" class="nav-link" data-access="@hasFeatureAccess('Fees Management')">
+                                    {{ __('Finance Dashboard') }}
+                                </a>
+                            </li>
+                        @endcan
+                        @can('fees-paid')
+                            <li class="nav-item">
                                 <a href="{{ route('outstanding-fees.index') }}" class="nav-link" data-access="@hasFeatureAccess('Fees Management')">
                                     {{ __('Student Finance') }}
                                 </a>
