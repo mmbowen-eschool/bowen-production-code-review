@@ -93,15 +93,11 @@ Dry Run 脚本中，自动回填的置信度判断规则是：当一个费用项
 
 ## 6. 是否建议今天执行真实回填？
 
-**暂不建议。** 建议先完成以下人工确认后再执行回填：
+**不建议。** 经进一步分析确认，当前 Uncategorized 数据主要来自历史测试数据——创建这些测试 Fee Items 时，系统尚未引入完整的 Finance Category / Report Category 功能，因此 `finance_category_id` 为 NULL。详见下方第 9 节最终决策。
 
-1. **Fee Items（15 条）**: 虽然 Item_Name 全部为"学费"，但 Fee_Name 为空的情况需要确认这些费用项目是否确实都对应 Tuition Fee，可能存在特殊费用项目
-2. **Expense（1 条）**: Title 为 "May - 2026"，Description 为 "Salary"，建议确认是否为 2026 年 5 月薪资，以及金额是否准确
-3. **已分类数据（3 条 Fee Items + 3 条 Expenses）** 需抽样验证分类是否准确
+## 7. 未来执行真实回填的安全原则（仅供参考，本次不执行）
 
-## 7. 未来执行真实回填的安全原则
-
-如果确认后需要执行真实回填，必须遵守以下原则：
+> 以下原则仅在**未来确有需要时**参考，当前 Phase 3.4 已决定不执行真实回填。
 
 ### 7.1 执行前
 
@@ -129,16 +125,48 @@ Dry Run 脚本中，自动回填的置信度判断规则是：当一个费用项
 
 ## 8. 下一步建议
 
+由于当前 Uncategorized 数据主要来自历史测试数据，且不影响 Total Income、Net Income、Outstanding、Student Ledger 或 Receipt，本阶段决定**不执行真实回填**。
+
+后续正式数据录入时，应在 **Fee Setup** / **Expense 创建或编辑页面** 中选择正确的 Finance Category，以避免新数据继续进入 Uncategorized。
+
 | 步骤 | 负责人 | 内容 |
 |------|--------|------|
-| 1 | 财务人员 | 确认 15 条"学费"Fee Items 是否全部归类为 Tuition Fee (ID=1) |
-| 2 | 财务人员 | 确认 Exp_ID=1 (May - 2026 / Salary) 是否为 Salary (ID=9) |
-| 3 | 财务人员 | 抽查已分类的 6 条记录是否分类正确 |
-| 4 | 开发人员 | 财务确认后准备安全回填脚本 |
-| 5 | 开发人员 | 回填前备份 `fees_class_types` 和 `expenses` |
-| 6 | 开发人员 | 执行回填并验证报表 |
+| 1 | 管理员 | 在 Fee Setup / Expense 页面中，创建或编辑时选择正确的 Finance Category |
+| 2 | 开发人员 | 如需可考虑在 Fee Setup / Expense 表单中将 Finance Category 设为必填项 |
+| 3 | — | 后续如有新学校上线，Finance Category 应由管理员在数据录入时一并设置，不再需要批量回填脚本 |
 
-> **重要**: 今天不要直接执行 UPDATE。等财务确认后再操作。
+## 9. 最终决策：不执行真实回填
+
+### 决策依据
+
+经过 Phase 3.2 生产 Dry Run 分析，SCH202615 / Zixuan 当前 Uncategorized 数据（15 条 Fee Items + 1 条 Expense）主要来自 **历史测试数据**。创建这些测试 Fee Items 时，系统尚未引入完整的 Finance Category / Report Category 功能，因此 `finance_category_id` 为 NULL。
+
+### 重要发现
+
+这些历史测试数据的 `finance_category_id = NULL` **不影响**以下核心财务模块：
+
+- **Total Income / Net Income** — 金额计算不依赖 `finance_category_id`
+- **Outstanding Fees** — 未缴费用按 `fees_id` / `student_id` 计算
+- **Student Ledger** — 学生账单按费用项目关联
+- **Receipt** — 收款不依赖 `finance_category_id`
+
+### 最终决定
+
+| 决定 | 说明 |
+|------|------|
+| **不执行 UPDATE 回填** | 不对历史测试数据执行 `finance_category_id` 回填 |
+| **不修改数据库** | 保留当前数据状态不变 |
+| **不执行 fix_finance_categories.php** | 不运行任何回填脚本 |
+| **不执行任何真实回填脚本** | Phase 3.4 暂停 |
+
+### 后续正式数据管理原则
+
+后续**正式新增** Fee Items / Expenses 时，由管理员在页面中直接选择正确的 Finance Category / Report Category：
+
+- **Fee Setup 页面**: 创建/编辑 Fee Item 时选择 Finance Category
+- **Expense 创建/编辑页面**: 创建/编辑 Expense 时选择 Finance Category
+
+这样可以确保**新数据从源头就有正确的分类**，不再产生 Uncategorized 数据。
 
 ---
 
