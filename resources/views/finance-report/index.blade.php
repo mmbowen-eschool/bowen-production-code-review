@@ -59,6 +59,19 @@
                                     </div>
                                 </div>
                             </div>
+                            {{-- Quick Date Buttons --}}
+                            <div class="row mt-2">
+                                <div class="form-group col-md-12 mb-0">
+                                    <label class="mr-2 mb-0">{{ __('Quick Date') }}:</label>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-primary" onclick="setQuickDate('today')">{{ __('Today') }}</button>
+                                        <button type="button" class="btn btn-outline-primary" onclick="setQuickDate('this_month')">{{ __('This Month') }}</button>
+                                        <button type="button" class="btn btn-outline-primary" onclick="setQuickDate('last_month')">{{ __('Last Month') }}</button>
+                                        <button type="button" class="btn btn-outline-primary" onclick="setQuickDate('this_quarter')">{{ __('This Quarter') }}</button>
+                                        <button type="button" class="btn btn-outline-primary" onclick="setQuickDate('this_year')">{{ __('This Year') }}</button>
+                                    </div>
+                                </div>
+                            </div>
                         </form>
                         @if ($hasFilter)
                             <div class="mt-2">
@@ -235,4 +248,48 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function setQuickDate(type) {
+            var today = new Date();
+            var y = today.getFullYear();
+            var m = today.getMonth(); // 0-indexed (Jan=0)
+            var d = today.getDate();
+
+            var from = '', to = '';
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function fmt(year, month, day) { return year + '-' + pad(month) + '-' + pad(day); }
+
+            switch (type) {
+                case 'today':
+                    from = fmt(y, m + 1, d);
+                    to   = fmt(y, m + 1, d);
+                    break;
+                case 'this_month':
+                    from = fmt(y, m + 1, 1);
+                    to   = fmt(y, m + 1, d);
+                    break;
+                case 'last_month':
+                    var firstOfLast = new Date(y, m - 1, 1);
+                    var lastOfLast  = new Date(y, m, 0);
+                    from = fmt(firstOfLast.getFullYear(), firstOfLast.getMonth() + 1, 1);
+                    to   = fmt(lastOfLast.getFullYear(), lastOfLast.getMonth() + 1, lastOfLast.getDate());
+                    break;
+                case 'this_quarter':
+                    var qStart = Math.floor(m / 3) * 3;
+                    from = fmt(y, qStart + 1, 1);
+                    to   = fmt(y, m + 1, d);
+                    break;
+                case 'this_year':
+                    from = fmt(y, 1, 1);
+                    to   = fmt(y, m + 1, d);
+                    break;
+            }
+
+            document.querySelector('input[name="from"]').value = from;
+            document.querySelector('input[name="to"]').value = to;
+            document.getElementById('finance-report-filter').submit();
+        }
+    </script>
 @endsection
