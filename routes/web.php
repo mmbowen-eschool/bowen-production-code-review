@@ -1127,8 +1127,8 @@ Route::get('school-settings/{id}/refund-cancellation', [SchoolSettingsController
 Route::get('payment/status', [PaymentController::class, 'status'])->name('payment.status');
 
 Route::get('/js/lang', function () {
-    $labels = Cache::remember('lang.js', 3600, function () {
-        $lang = app()->getLocale();
+    $lang = app()->getLocale();
+    $labels = Cache::remember("lang.js.{$lang}", 3600, function () use ($lang) {
         $file = resource_path("lang/{$lang}.json");
         return File::get($file);
     });
